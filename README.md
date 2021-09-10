@@ -11,7 +11,7 @@ Jupyter notebooks within each folder help : (1) observe the geometry computed by
 
 TODO
 
-* Add a class to deine and hold geometry (instead of semi-hardcoding) and share across analyses
+* Add a class to define and hold geometry (instead of semi-hardcoding) and share across analyses
 * Extend to partial etch processes
 * Improve parameter sweep interface
 * Add optimization (NLopt)
