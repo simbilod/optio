@@ -1,4 +1,5 @@
 # grating_coupler_meep
+
 Sample scripts to perform 2D grating coupler simulation using the open-source FDTD software MEEP
 
 Folder "far field" contains scripts to simulate the radiation pattern of a waveguide + grating.
@@ -20,8 +21,7 @@ TODO
 Clean up
 
 References
-Literature :
-[1] Chrostowski, L., & Hochberg, M. (2015). Optical I/O. Silicon Photonics Design: From Devices to Systems. Cambridge University Press. doi: 10.1017/CBO9781316084168.006
-Software examples :
-[1] https://support.lumerical.com/hc/en-us/articles/360042305334-Grating-coupler
-[2] http://www.simpetus.com/projects.html#meep_outcoupler
+
+- [1] Chrostowski, L., & Hochberg, M. (2015). Optical I/O. Silicon Photonics Design: From Devices to Systems. Cambridge University Press. doi: 10.1017/CBO9781316084168.006
+- [2] https://support.lumerical.com/hc/en-us/articles/360042305334-Grating-coupler
+- [3] http://www.simpetus.com/projects.html#meep_outcoupler
