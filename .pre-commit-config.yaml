@@ -23,10 +23,10 @@ repos:
       hooks:
           - id: black
 
-    - repo: https://gitlab.com/pycqa/flake8
-      rev: "21d3c70d676007470908d39b73f0521d39b3b997"
-      hooks:
-          - id: flake8
+    # - repo: https://gitlab.com/pycqa/flake8
+    #   rev: "21d3c70d676007470908d39b73f0521d39b3b997"
+    #   hooks:
+    #       - id: flake8
 
     - repo: https://github.com/kynan/nbstripout
       rev: 3843f5f7c586fa6f0df81423f35d52e6af8e3039

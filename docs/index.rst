@@ -8,5 +8,3 @@ grating_coupler_meep
     README
     markdown
     rst
-
-

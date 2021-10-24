@@ -7,4 +7,3 @@ grating coupler meep
 ## Installation
 
 `make install`
-

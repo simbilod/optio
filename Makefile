@@ -1,5 +1,5 @@
 
-install: 
+install:
 	pip install -r requirements.txt --upgrade
 	pip install -r requirements_dev.txt --upgrade
 	pip install -e .
@@ -7,7 +7,7 @@ install:
 	conda install -y pymeep
 	pre-commit install
 
-link: 
+link:
 	pip install -e .
 	pre-commit install
 
@@ -21,7 +21,7 @@ mypy:
 	mypy . --ignore-missing-imports
 
 lint:
-	flake8 
+	flake8
 
 pylint:
 	pylint grating_coupler_meep
