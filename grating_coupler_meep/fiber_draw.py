@@ -40,6 +40,9 @@ def draw_grating_coupler_fiber(
     etch_depth: float = 70 * nm,
     widths: Optional[Floats] = None,
     gaps: Optional[Floats] = None,
+    wavelength_min: float = 1.5,
+    wavelength_max: float = 1.6,
+    wavelength_points: int = 50,
 ):
     """Returns simulation
     Draw grating coupler with fiber.
@@ -55,7 +58,8 @@ def draw_grating_coupler_fiber(
         gaps: overrides n_periods period and fill_factor
 
     """
-
+    wavelengths = np.linspace(wavelength_min, wavelength_max, wavelength_points)
+    freqs = 1 / wavelengths
     widths = widths or n_periods * [period * fill_factor]
     gaps = gaps or n_periods * [period * (1 - fill_factor)]
 
@@ -244,14 +248,14 @@ def draw_grating_coupler_fiber(
         center=waveguide_port_center + mp.Vector3(x=0.2), size=waveguide_port_size
     )
     waveguide_monitor = sim.add_mode_monitor(
-        fcen, 0, 1, waveguide_monitor_port, yee_grid=True
+        freqs, 0, 1, waveguide_monitor_port, yee_grid=True
     )
     fiber_monitor_port = mp.ModeRegion(
         center=fiber_port_center - mp.Vector3(y=0.2),
         size=fiber_port_size,
         direction=mp.NO_DIRECTION,
     )
-    fiber_monitor = sim.add_mode_monitor(fcen, 0, 1, fiber_monitor_port)
+    fiber_monitor = sim.add_mode_monitor(freqs, 0, 1, fiber_monitor_port)
     return sim, fiber_monitor, waveguide_monitor
 
 
