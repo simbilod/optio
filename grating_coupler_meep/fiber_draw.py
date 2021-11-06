@@ -1,11 +1,14 @@
-"""
+"""SMF specs from photonics.byu.edu/FiberOpticConnectors.parts/images/smf28.pdf
 
-8.2 SMF core diameter comes from
-https://www.corning.com/media/worldwide/coc/documents/Fiber/SMF-28%20Ultra.pdf
+MFD:
+
+- 10.4 for Cband
+- 9.2 for Oband
 
 """
 
 from functools import partial
+from typing import Optional, Tuple
 
 import meep as mp
 import numpy as np
@@ -14,54 +17,59 @@ nm = 1e-3
 nSi = 3.47
 nSiO2 = 1.45
 
+Floats = Tuple[float, ...]
+
 
 def draw_grating_coupler_fiber(
-    period: float = 1.5,
+    period: float = 0.68,
     fill_factor: float = 0.5,
     fiber_angle_deg: float = 15.0,
     fiber_xposition: float = 1.0,
-    fiber_core_diameter: float = 8.2,
+    fiber_core_diameter: float = 10.4,
     fiber_numerical_aperture: float = 0.14,
     fiber_nclad: float = nSiO2,
     resolution: int = 64,  # pixels/um
     ncore: float = nSi,
     nclad: float = nSiO2,
     nsubstrate: float = nSi,
-    n_periods: int = 24,
+    n_periods: int = 30,
     box_thickness: float = 3.0,
+    clad_thickness: float = 2.0,
     core_thickness: float = 220 * nm,
     wavelength: float = 1.55,
     etch_depth: float = 70 * nm,
+    widths: Optional[Floats] = None,
+    gaps: Optional[Floats] = None,
 ):
-    """
+    """Returns simulation
     Draw grating coupler with fiber.
-
-    based on https://github.com/simbilod/grating_coupler_meep/blob/master/fiber/gc_outcoupler2.py
-
     na**2 = ncore**2 - nclad**2
-
     ncore = sqrt(na**2 + ncore**2)
-
 
     Args:
         period: grating coupler period
+        fill_factor:
+        fiber_angle_deg
+
+        widths: overrides n_periods period and fill_factor
+        gaps: overrides n_periods period and fill_factor
 
     """
+
+    widths = widths or n_periods * [period * fill_factor]
+    gaps = gaps or n_periods * [period * (1 - fill_factor)]
+
     substrate_thickness = 1.0
     hair = 4
     core_material = mp.Medium(index=ncore)
     clad_material = mp.Medium(index=nclad)
 
-    dgap = period * (1 - fill_factor)
     dtaper = 12
     dbuffer = 0.5
     dpml = 1
 
-    # Fiber; semi-hardcoded
-    # Fiber parameters, from SMF-633-4/125-1-L or PMF-633-4/125-0.25-L
     fiber_clad = 120
     fiber_angle = np.radians(fiber_angle_deg)
-    haircore = 2
     hfiber_geom = 100  # Some large number to make fiber extend into PML
 
     fiber_ncore = (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
@@ -80,6 +88,7 @@ def draw_grating_coupler_fiber(
     )  # sy here
     # comp_origin_x = dpml + dbuffer + dtaper
     comp_origin_x = 0
+
     # meep_origin_x = sxy/2
     # x_offset = meep_origin_x - comp_origin_x
     # x_offset = 0
@@ -103,7 +112,6 @@ def draw_grating_coupler_fiber(
     # Fiber (defined first to be overridden)
 
     # Core
-    # fiber_offset = mp.Vector3(fiber_xposition + extrax, core_thickness/2 + hair + haircore + extray) - offset_vector
     geometry.append(
         mp.Block(
             material=fiber_clad_material,
@@ -127,8 +135,8 @@ def draw_grating_coupler_fiber(
     geometry.append(
         mp.Block(
             material=clad_material,
-            center=mp.Vector3(0, haircore / 2) - offset_vector,
-            size=mp.Vector3(mp.inf, haircore),
+            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
+            size=mp.Vector3(mp.inf, clad_thickness),
         )
     )
 
@@ -136,21 +144,23 @@ def draw_grating_coupler_fiber(
     geometry.append(
         mp.Block(
             material=core_material,
-            center=mp.Vector3(0, 0) - offset_vector,
+            center=mp.Vector3(0, core_thickness / 2) - offset_vector,
             size=mp.Vector3(mp.inf, core_thickness),
         )
     )
 
     # grating etch
-    for i in range(n_periods):
+    x = 0
+    for width, gap in zip(widths, gaps):
         geometry.append(
             mp.Block(
                 material=clad_material,
-                center=mp.Vector3(i * period + dgap / 2, etch_depth / 2)
+                center=mp.Vector3(x + gap / 2, core_thickness - etch_depth / 2)
                 - offset_vector,
-                size=mp.Vector3(dgap, etch_depth),
+                size=mp.Vector3(gap, etch_depth),
             )
         )
+        x += width + gap
 
     geometry.append(
         mp.Block(
@@ -165,8 +175,7 @@ def draw_grating_coupler_fiber(
     geometry.append(
         mp.Block(
             material=clad_material,
-            center=mp.Vector3(0, -0.5 * (core_thickness + box_thickness))
-            - offset_vector,
+            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
             size=mp.Vector3(mp.inf, box_thickness),
         )
     )
@@ -192,7 +201,7 @@ def draw_grating_coupler_fiber(
     fcen = 1 / wavelength
 
     waveguide_port_center = mp.Vector3(-1 * dtaper, 0) - offset_vector
-    waveguide_port_size = mp.Vector3(0, 2 * haircore - 0.2)
+    waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
     fiber_port_center = (
         mp.Vector3(
             (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle) + fiber_xposition,
@@ -246,7 +255,7 @@ def draw_grating_coupler_fiber(
     return sim, fiber_monitor, waveguide_monitor
 
 
-# remove silicon to clearly see the fiber
+# remove silicon to clearly see the fiber (for debugging)
 draw_grating_coupler_fiber_no_silicon = partial(
     draw_grating_coupler_fiber, ncore=nSiO2, nsubstrate=nSiO2
 )
@@ -255,8 +264,8 @@ draw_grating_coupler_fiber_no_silicon = partial(
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    # sim, fiber_monitor, waveguide_monitor = draw_grating_coupler_fiber()
-    sim, fiber_monitor, waveguide_monitor = draw_grating_coupler_fiber_no_silicon()
+    sim, fiber_monitor, waveguide_monitor = draw_grating_coupler_fiber()
+    # sim, fiber_monitor, waveguide_monitor = draw_grating_coupler_fiber_no_silicon()
 
     sim.plot2D()
     plt.show()

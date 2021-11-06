@@ -7,10 +7,7 @@ nm = 1e-3
 
 
 def run(**kwargs):
-    """
-    Draw grating coupler with fiber.
-
-    based on https://github.com/simbilod/grating_coupler_meep/blob/master/fiber/gc_outcoupler2.py
+    """Draw grating coupler with fiber.
 
     Args:
         period: grating coupler period
@@ -82,9 +79,7 @@ if __name__ == "__main__":
     #     "x": fiber_xposition,
     #     "source": source,
     # }
-
     # filename_dat = "./data/" + filename + ".pickle"
-
     # with open(filename_dat, "wb") as f:
     #     pickle.dump(
     #         {"params": params, "res_fiber": res_fiber, "res_waveguide": res_waveguide},
