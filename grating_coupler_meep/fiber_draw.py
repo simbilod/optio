@@ -49,7 +49,7 @@ def draw_grating_coupler_fiber(
     Args:
         period: grating coupler period
         fill_factor:
-        fiber_angle_deg
+        fiber_angle_deg: angle fiber in degrees
 
         widths: overrides n_periods period and fill_factor
         gaps: overrides n_periods period and fill_factor
