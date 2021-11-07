@@ -265,13 +265,13 @@ def grating_coupler_fiber(
     start = time.time()
 
     # Run simulation
-    sim.run(until=400)
-    # field_monitor_point = (-dtaper, 0, 0)
-    # sim.run(
-    #     until_after_sources=mp.stop_when_fields_decayed(
-    #         dt=50, c=mp.Ex, pt=field_monitor_point, decay_by=1e-9
-    #     )
-    # )
+    # sim.run(until=400)
+    field_monitor_point = (-dtaper, 0, 0)
+    sim.run(
+        until_after_sources=mp.stop_when_fields_decayed(
+            dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=1e-9
+        )
+    )
 
     # Extract mode information
     transmission_waveguide = sim.get_eigenmode_coefficients(
@@ -292,8 +292,6 @@ def grating_coupler_fiber(
     simulation = dict(
         settings=settings,
         compute_time_seconds=end - start,
-        reflection_fiber=reflection_fiber,
-        transmission_waveguide=transmission_waveguide,
     )
     filepath.write_text(omegaconf.OmegaConf.to_yaml(simulation))
 
@@ -312,7 +310,7 @@ grating_coupler_fiber_no_silicon = partial(
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    df = grating_coupler_fiber(run=False)
+    df = grating_coupler_fiber(run=True)
     # df = grating_coupler_fiber_no_silicon()
 
     print(df)
