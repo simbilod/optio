@@ -1,6 +1,9 @@
 import hashlib
+import time
 import pathlib
 import omegaconf
+import numpy as np
+import pandas as pd
 
 import meep as mp
 from fiber_draw import draw_grating_coupler_fiber
@@ -15,7 +18,14 @@ def clean_value(value) -> str:
     return str(value)
 
 
-def run(fiber_angle_deg: float = 15.0, **kwargs) -> float:
+def run(
+    fiber_angle_deg: float = 15.0,
+    wavelength_min: float = 1.5,
+    wavelength_max: float = 1.6,
+    wavelength_points: int = 50,
+    overwrite: bool = False,
+    **kwargs,
+) -> pd.DataFrame:
     """Returns grating coupler with fiber coupling efficiency.
 
     Args:
@@ -28,18 +38,25 @@ def run(fiber_angle_deg: float = 15.0, **kwargs) -> float:
     settings_string_list = [
         f"{key}={clean_value(settings[key])}" for key in sorted(settings.keys())
     ]
+    wavelengths = np.linspace(wavelength_min, wavelength_max, wavelength_points)
 
     settings_string = "_".join(settings_string_list)
     settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
-    filename = f"fiber_{settings_hash}"
-    filepath = pathlib.Path("data" / filename)
 
-    if filepath.exists():
-        simulation = omegaconf.OmegaConf.load(filepath)
-        return simulation["transmission_waveguide"]
+    filename = f"fiber_{settings_hash}.yml"
+    filepath = pathlib.Path("data") / filename
+    filepath_csv = filepath.with_suffix(".csv")
 
+    if filepath_csv.exists() and not overwrite:
+        return pd.read_csv(filepath_csv)
+
+    start = time.time()
     sim, fiber_monitor, waveguide_monitor = draw_grating_coupler_fiber(
-        fiber_angle_deg=fiber_angle_deg, **kwargs
+        fiber_angle_deg=fiber_angle_deg,
+        wavelength_min=wavelength_min,
+        wavelength_max=wavelength_max,
+        wavelength_points=wavelength_points,
+        **kwargs,
     )
 
     # Run simulation
@@ -57,13 +74,19 @@ def run(fiber_angle_deg: float = 15.0, **kwargs) -> float:
         eig_parity=mp.ODD_Z,
         kpoint_func=lambda f, n: kpoint,
     )
+    end = time.time()
     simulation = dict(
         settings=settings,
+        compute_time_seconds=end - start,
         reflection_fiber=reflection_fiber,
         transmission_waveguide=transmission_waveguide,
     )
     filepath.write_text(omegaconf.OmegaConf.to_yaml(simulation))
-    return transmission_waveguide
+
+    results = dict(t=transmission_waveguide, r=reflection_fiber)
+    df = pd.DataFrame(results, index=wavelengths)
+    df.to_csv(filepath_csv, index=False)
+    return df
 
 
 if __name__ == "__main__":
