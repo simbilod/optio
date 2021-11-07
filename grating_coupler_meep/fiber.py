@@ -87,7 +87,7 @@ def grating_coupler_fiber(
     fiber_core_material = mp.Medium(index=fiber_ncore)
 
     # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
-    sxy = 2 * dpml + dtaper + period * n_periods + 2 * dbuffer  # sx here
+    sxy = 2 * dpml + dtaper + period * n_periods + 2 * dbuffer
     sz = (
         2 * dbuffer
         + box_thickness
@@ -95,33 +95,16 @@ def grating_coupler_fiber(
         + hair
         + substrate_thickness
         + 2 * dpml
-    )  # sy here
-    # comp_origin_x = dpml + dbuffer + dtaper
+    )
     comp_origin_x = 0
-
-    # meep_origin_x = sxy/2
-    # x_offset = meep_origin_x - comp_origin_x
-    # x_offset = 0
-    # comp_origin_y = dpml + substrate_thickness + box_thickness + core_thickness/2
-    # comp_origin_y = 0
-    # meep_origin_y = sz/2
-    # y_offset = meep_origin_y - comp_origin_y
     y_offset = 0
-
-    # x_offset_vector = mp.Vector3(x_offset,0)
-    # offset_vector = mp.Vector3(x_offset, y_offset)
     offset_vector = mp.Vector3(0, 0, 0)
-
-    Si = mp.Medium(index=nsubstrate)
 
     # We will do x-z plane simulation
     cell_size = mp.Vector3(sxy, sz)
 
     geometry = []
-
     # Fiber (defined first to be overridden)
-
-    # Core
     geometry.append(
         mp.Block(
             material=fiber_clad_material,
@@ -193,7 +176,7 @@ def grating_coupler_fiber(
     # Substrate
     geometry.append(
         mp.Block(
-            material=Si,
+            material=mp.Medium(index=nsubstrate),
             center=mp.Vector3(
                 0,
                 -0.5 * (core_thickness + substrate_thickness + dpml + dbuffer)
@@ -254,14 +237,14 @@ def grating_coupler_fiber(
         center=waveguide_port_center + mp.Vector3(x=0.2), size=waveguide_port_size
     )
     waveguide_monitor = sim.add_mode_monitor(
-        freqs, 0, 1, waveguide_monitor_port, yee_grid=True
+        freqs, waveguide_monitor_port, yee_grid=True
     )
     fiber_monitor_port = mp.ModeRegion(
         center=fiber_port_center - mp.Vector3(y=0.2),
         size=fiber_port_size,
         direction=mp.NO_DIRECTION,
     )
-    fiber_monitor = sim.add_mode_monitor(freqs, 0, 1, fiber_monitor_port)
+    fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
 
     if not run:
         sim.plot2D()
@@ -329,7 +312,7 @@ grating_coupler_fiber_no_silicon = partial(
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
 
-    df = grating_coupler_fiber()
+    df = grating_coupler_fiber(run=False)
     # df = grating_coupler_fiber_no_silicon()
 
     print(df)

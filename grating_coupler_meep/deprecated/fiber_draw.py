@@ -60,6 +60,7 @@ def draw_grating_coupler_fiber(
     """
     wavelengths = np.linspace(wavelength_min, wavelength_max, wavelength_points)
     freqs = 1 / wavelengths
+    freqs = 1 / wavelength
     widths = widths or n_periods * [period * fill_factor]
     gaps = gaps or n_periods * [period * (1 - fill_factor)]
 
