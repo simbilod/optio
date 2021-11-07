@@ -44,7 +44,6 @@ def grating_coupler_fiber(
     box_thickness: float = 3.0,
     clad_thickness: float = 2.0,
     core_thickness: float = 220 * nm,
-    wavelength: float = 1.55,
     etch_depth: float = 70 * nm,
     wavelength_min: float = 1.5,
     wavelength_max: float = 1.6,
@@ -65,6 +64,7 @@ def grating_coupler_fiber(
 
     """
     wavelengths = np.linspace(wavelength_min, wavelength_max, wavelength_points)
+    wavelength = np.mean(wavelengths)
     freqs = 1 / wavelengths
     widths = widths or n_periods * [period * fill_factor]
     gaps = gaps or n_periods * [period * (1 - fill_factor)]
