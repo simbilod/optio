@@ -50,6 +50,7 @@ def grating_coupler_fiber(
     wavelength_points: int = 50,
     run: bool = True,
     overwrite: bool = False,
+    dirpath: Optional[str] = None,
 ):
     """Returns simulation results from grating coupler with fiber.
     na**2 = ncore**2 - nclad**2
@@ -256,8 +257,10 @@ def grating_coupler_fiber(
     settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
 
     filename = f"fiber_{settings_hash}.yml"
-    filepath = pathlib.Path("data") / filename
+    dirpath = pathlib.Path(dirpath) or pathlib.Path(__file__) / "data"
+    filepath = dirpath / filename
     filepath_csv = filepath.with_suffix(".csv")
+    dirpath.mkdir(exist_ok=True, parents=True)
 
     if filepath_csv.exists() and not overwrite:
         return pd.read_csv(filepath_csv)
