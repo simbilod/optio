@@ -5,6 +5,12 @@ MFD:
 - 10.4 for Cband
 - 9.2 for Oband
 
+TODO:
+
+- verify with lumerical sims
+- get Sparameters
+- enable mpi run from python
+
 """
 
 import sys
