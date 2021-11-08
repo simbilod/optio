@@ -257,7 +257,7 @@ def grating_coupler_fiber(
     settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
 
     filename = f"fiber_{settings_hash}.yml"
-    dirpath = dirpath or pathlib.Path(__file__) / "data"
+    dirpath = dirpath or pathlib.Path(__file__).parent / "data"
     dirpath = pathlib.Path(dirpath)
     dirpath.mkdir(exist_ok=True, parents=True)
     filepath = dirpath / filename
