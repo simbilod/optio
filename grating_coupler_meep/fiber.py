@@ -257,10 +257,11 @@ def grating_coupler_fiber(
     settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
 
     filename = f"fiber_{settings_hash}.yml"
-    dirpath = pathlib.Path(dirpath) or pathlib.Path(__file__) / "data"
+    dirpath = dirpath or pathlib.Path(__file__) / "data"
+    dirpath = pathlib.Path(dirpath)
+    dirpath.mkdir(exist_ok=True, parents=True)
     filepath = dirpath / filename
     filepath_csv = filepath.with_suffix(".csv")
-    dirpath.mkdir(exist_ok=True, parents=True)
 
     if filepath_csv.exists() and not overwrite:
         return pd.read_csv(filepath_csv)
