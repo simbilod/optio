@@ -1,67 +1,96 @@
+"""SMF specs from photonics.byu.edu/FiberOpticConnectors.parts/images/smf28.pdf
+
+MFD:
+
+- 10.4 for Cband
+- 9.2 for Oband
+
+TODO:
+
+- verify with lumerical sims
+- get Sparameters
+- enable mpi run from python
+
 """
 
-8.2 SMF core diameter comes from
-https://www.corning.com/media/worldwide/coc/documents/Fiber/SMF-28%20Ultra.pdf
-
-"""
-
+import sys
 from functools import partial
+from typing import Optional, Tuple
+
+import hashlib
+import time
+import pathlib
+import omegaconf
+import pandas as pd
 
 import meep as mp
 import numpy as np
+import fire
 
 nm = 1e-3
 nSi = 3.47
 nSiO2 = 1.45
 
+Floats = Tuple[float, ...]
 
-def draw_grating_coupler_fiber(
-    period: float = 1.5,
+
+def grating_coupler_fiber(
+    period: float = 0.68,
     fill_factor: float = 0.5,
+    widths: Optional[Floats] = None,
+    gaps: Optional[Floats] = None,
     fiber_angle_deg: float = 15.0,
     fiber_xposition: float = 1.0,
-    fiber_core_diameter: float = 8.2,
+    fiber_core_diameter: float = 10.4,
     fiber_numerical_aperture: float = 0.14,
     fiber_nclad: float = nSiO2,
     resolution: int = 64,  # pixels/um
     ncore: float = nSi,
     nclad: float = nSiO2,
     nsubstrate: float = nSi,
-    n_periods: int = 24,
+    n_periods: int = 30,
     box_thickness: float = 3.0,
+    clad_thickness: float = 2.0,
     core_thickness: float = 220 * nm,
-    wavelength: float = 1.55,
     etch_depth: float = 70 * nm,
+    wavelength_min: float = 1.5,
+    wavelength_max: float = 1.6,
+    wavelength_points: int = 50,
+    run: bool = True,
+    overwrite: bool = False,
+    dirpath: Optional[str] = None,
+    decay_by: float = 1e-3,
 ):
-    """
-    Draw grating coupler with fiber.
-
-    based on https://github.com/simbilod/grating_coupler_meep/blob/master/fiber/gc_outcoupler2.py
-
+    """Returns simulation results from grating coupler with fiber.
     na**2 = ncore**2 - nclad**2
-
     ncore = sqrt(na**2 + ncore**2)
-
 
     Args:
         period: grating coupler period
+        fill_factor:
+        widths: overrides n_periods period and fill_factor
+        gaps: overrides n_periods period and fill_factor
+        fiber_angle_deg: angle fiber in degrees
+        decay_by: 1e-9
 
     """
+    wavelengths = np.linspace(wavelength_min, wavelength_max, wavelength_points)
+    wavelength = np.mean(wavelengths)
+    freqs = 1 / wavelengths
+    widths = widths or n_periods * [period * fill_factor]
+    gaps = gaps or n_periods * [period * (1 - fill_factor)]
+
     substrate_thickness = 1.0
     hair = 4
     core_material = mp.Medium(index=ncore)
     clad_material = mp.Medium(index=nclad)
 
-    dgap = period * (1 - fill_factor)
     dtaper = 12
     dbuffer = 0.5
     dpml = 1
 
-    # Fiber; semi-hardcoded
-    # Fiber parameters, from SMF-633-4/125-1-L or PMF-633-4/125-0.25-L
     fiber_clad = 120
     fiber_angle = np.radians(fiber_angle_deg)
-    haircore = 2
     hfiber_geom = 100  # Some large number to make fiber extend into PML
 
     fiber_ncore = (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
@@ -69,7 +98,7 @@ def draw_grating_coupler_fiber(
     fiber_core_material = mp.Medium(index=fiber_ncore)
 
     # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
-    sxy = 2 * dpml + dtaper + period * n_periods + 2 * dbuffer  # sx here
+    sxy = 2 * dpml + dtaper + period * n_periods + 2 * dbuffer
     sz = (
         2 * dbuffer
         + box_thickness
@@ -77,33 +106,16 @@ def draw_grating_coupler_fiber(
         + hair
         + substrate_thickness
         + 2 * dpml
-    )  # sy here
-    # comp_origin_x = dpml + dbuffer + dtaper
+    )
     comp_origin_x = 0
-    # meep_origin_x = sxy/2
-    # x_offset = meep_origin_x - comp_origin_x
-    # x_offset = 0
-    # comp_origin_y = dpml + substrate_thickness + box_thickness + core_thickness/2
-    # comp_origin_y = 0
-    # meep_origin_y = sz/2
-    # y_offset = meep_origin_y - comp_origin_y
     y_offset = 0
-
-    # x_offset_vector = mp.Vector3(x_offset,0)
-    # offset_vector = mp.Vector3(x_offset, y_offset)
     offset_vector = mp.Vector3(0, 0, 0)
-
-    Si = mp.Medium(index=nsubstrate)
 
     # We will do x-z plane simulation
     cell_size = mp.Vector3(sxy, sz)
 
     geometry = []
-
     # Fiber (defined first to be overridden)
-
-    # Core
-    # fiber_offset = mp.Vector3(fiber_xposition + extrax, core_thickness/2 + hair + haircore + extray) - offset_vector
     geometry.append(
         mp.Block(
             material=fiber_clad_material,
@@ -127,8 +139,8 @@ def draw_grating_coupler_fiber(
     geometry.append(
         mp.Block(
             material=clad_material,
-            center=mp.Vector3(0, haircore / 2) - offset_vector,
-            size=mp.Vector3(mp.inf, haircore),
+            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
+            size=mp.Vector3(mp.inf, clad_thickness),
         )
     )
 
@@ -136,21 +148,23 @@ def draw_grating_coupler_fiber(
     geometry.append(
         mp.Block(
             material=core_material,
-            center=mp.Vector3(0, 0) - offset_vector,
+            center=mp.Vector3(0, core_thickness / 2) - offset_vector,
             size=mp.Vector3(mp.inf, core_thickness),
         )
     )
 
     # grating etch
-    for i in range(n_periods):
+    x = 0
+    for width, gap in zip(widths, gaps):
         geometry.append(
             mp.Block(
                 material=clad_material,
-                center=mp.Vector3(i * period + dgap / 2, etch_depth / 2)
+                center=mp.Vector3(x + gap / 2, core_thickness - etch_depth / 2)
                 - offset_vector,
-                size=mp.Vector3(dgap, etch_depth),
+                size=mp.Vector3(gap, etch_depth),
             )
         )
+        x += width + gap
 
     geometry.append(
         mp.Block(
@@ -165,8 +179,7 @@ def draw_grating_coupler_fiber(
     geometry.append(
         mp.Block(
             material=clad_material,
-            center=mp.Vector3(0, -0.5 * (core_thickness + box_thickness))
-            - offset_vector,
+            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
             size=mp.Vector3(mp.inf, box_thickness),
         )
     )
@@ -174,7 +187,7 @@ def draw_grating_coupler_fiber(
     # Substrate
     geometry.append(
         mp.Block(
-            material=Si,
+            material=mp.Medium(index=nsubstrate),
             center=mp.Vector3(
                 0,
                 -0.5 * (core_thickness + substrate_thickness + dpml + dbuffer)
@@ -191,8 +204,8 @@ def draw_grating_coupler_fiber(
     # mode frequency
     fcen = 1 / wavelength
 
-    waveguide_port_center = mp.Vector3(-1 * dtaper, 0) - offset_vector
-    waveguide_port_size = mp.Vector3(0, 2 * haircore - 0.2)
+    waveguide_port_center = mp.Vector3(-dtaper, 0) - offset_vector
+    waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
     fiber_port_center = (
         mp.Vector3(
             (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle) + fiber_xposition,
@@ -235,28 +248,92 @@ def draw_grating_coupler_fiber(
         center=waveguide_port_center + mp.Vector3(x=0.2), size=waveguide_port_size
     )
     waveguide_monitor = sim.add_mode_monitor(
-        fcen, 0, 1, waveguide_monitor_port, yee_grid=True
+        freqs, waveguide_monitor_port, yee_grid=True
     )
     fiber_monitor_port = mp.ModeRegion(
         center=fiber_port_center - mp.Vector3(y=0.2),
         size=fiber_port_size,
         direction=mp.NO_DIRECTION,
     )
-    fiber_monitor = sim.add_mode_monitor(fcen, 0, 1, fiber_monitor_port)
-    return sim, fiber_monitor, waveguide_monitor
+    fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
+
+    if not run:
+        sim.plot2D()
+        return pd.DataFrame()
+
+    settings_list = widths + gaps
+    settings_string_list = [str(i) for i in settings_list]
+    settings_string = "_".join(settings_string_list)
+    settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
+
+    filename = f"fiber_{settings_hash}.yml"
+    dirpath = dirpath or pathlib.Path(__file__).parent / "data"
+    dirpath = pathlib.Path(dirpath)
+    dirpath.mkdir(exist_ok=True, parents=True)
+    filepath = dirpath / filename
+    filepath_csv = filepath.with_suffix(".csv")
+
+    if filepath_csv.exists() and not overwrite:
+        return pd.read_csv(filepath_csv)
+
+    else:
+        start = time.time()
+        # Run simulation
+        # sim.run(until=400)
+        field_monitor_point = (-dtaper, 0, 0)
+        sim.run(
+            until_after_sources=mp.stop_when_fields_decayed(
+                dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
+            )
+        )
+
+        # Extract mode information
+        transmission_waveguide = sim.get_eigenmode_coefficients(
+            waveguide_monitor, [1], eig_parity=mp.ODD_Z, direction=mp.X
+        ).alpha
+        kpoint = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle_deg)
+        reflection_fiber = sim.get_eigenmode_coefficients(
+            fiber_monitor,
+            [1],
+            direction=mp.NO_DIRECTION,
+            eig_parity=mp.ODD_Z,
+            kpoint_func=lambda f, n: kpoint,
+        ).alpha
+        end = time.time()
+
+        a1 = transmission_waveguide[:, :, 0].flatten()  # forward wave
+        b1 = transmission_waveguide[:, :, 1].flatten()  # backward wave
+        a2 = reflection_fiber[:, :, 0].flatten()  # forward wave
+        b2 = reflection_fiber[:, :, 1].flatten()  # backward wave
+
+        s11 = np.squeeze(b1 / a1)
+        s12 = np.squeeze(a2 / a1)
+        s22 = s11.copy()
+        s21 = s12.copy()
+
+        settings = dict(period=period, fill_factor=fill_factor)
+
+        simulation = dict(
+            settings=settings,
+            compute_time_seconds=end - start,
+        )
+        filepath.write_text(omegaconf.OmegaConf.to_yaml(simulation))
+
+        r = dict(s11=s11, s12=s12, s21=s21, s22=s22, wavelengths=wavelengths)
+        keys = [key for key in r.keys() if key.startswith("s")]
+        s = {f"{key}a": list(np.unwrap(np.angle(r[key].flatten()))) for key in keys}
+        s.update({f"{key}m": list(np.abs(r[key].flatten())) for key in keys})
+
+        df = pd.DataFrame(s, index=wavelengths)
+        df.to_csv(filepath_csv, index=False)
+        return df
 
 
-# remove silicon to clearly see the fiber
-draw_grating_coupler_fiber_no_silicon = partial(
-    draw_grating_coupler_fiber, ncore=nSiO2, nsubstrate=nSiO2
+# remove silicon to clearly see the fiber (for debugging)
+grating_coupler_fiber_no_silicon = partial(
+    grating_coupler_fiber, ncore=nSiO2, nsubstrate=nSiO2
 )
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
-    # sim, fiber_monitor, waveguide_monitor = draw_grating_coupler_fiber()
-    sim, fiber_monitor, waveguide_monitor = draw_grating_coupler_fiber_no_silicon()
-
-    sim.plot2D()
-    plt.show()
+    fire.Fire(grating_coupler_fiber)
