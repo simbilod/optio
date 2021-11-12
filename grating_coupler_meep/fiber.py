@@ -60,7 +60,8 @@ def grating_coupler_fiber(
     overwrite: bool = False,
     dirpath: Optional[str] = None,
     decay_by: float = 1e-3,
-):
+    dtaper: float = 1,
+) -> pd.DataFrame:
     """Returns simulation results from grating coupler with fiber.
     na**2 = ncore**2 - nclad**2
     ncore = sqrt(na**2 + ncore**2)
@@ -80,12 +81,13 @@ def grating_coupler_fiber(
     widths = widths or n_periods * [period * fill_factor]
     gaps = gaps or n_periods * [period * (1 - fill_factor)]
 
+    length_grating = np.sum(widths) + np.sum(gaps)
+
     substrate_thickness = 1.0
     hair = 4
     core_material = mp.Medium(index=ncore)
     clad_material = mp.Medium(index=nclad)
 
-    dtaper = 12
     dbuffer = 0.5
     dpml = 1
 
@@ -98,7 +100,7 @@ def grating_coupler_fiber(
     fiber_core_material = mp.Medium(index=fiber_ncore)
 
     # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
-    sxy = 2 * dpml + dtaper + period * n_periods + 2 * dbuffer
+    sxy = 2 * dpml + dtaper + length_grating + 2 * dbuffer
     sz = (
         2 * dbuffer
         + box_thickness
@@ -154,7 +156,7 @@ def grating_coupler_fiber(
     )
 
     # grating etch
-    x = 0
+    x = -length_grating / 2
     for width, gap in zip(widths, gaps):
         geometry.append(
             mp.Block(
@@ -204,7 +206,7 @@ def grating_coupler_fiber(
     # mode frequency
     fcen = 1 / wavelength
 
-    waveguide_port_center = mp.Vector3(-dtaper, 0) - offset_vector
+    waveguide_port_center = mp.Vector3(-dtaper - length_grating / 2, 0) - offset_vector
     waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
     fiber_port_center = (
         mp.Vector3(
@@ -331,9 +333,15 @@ def grating_coupler_fiber(
 
 # remove silicon to clearly see the fiber (for debugging)
 grating_coupler_fiber_no_silicon = partial(
-    grating_coupler_fiber, ncore=nSiO2, nsubstrate=nSiO2
+    grating_coupler_fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False
 )
 
 
 if __name__ == "__main__":
+    import matplotlib.pyplot as plt
+
+    # grating_coupler_fiber(run=False, fiber_xposition=5)
+    # plt.show()
+    # grating_coupler_fiber_no_silicon()
+
     fire.Fire(grating_coupler_fiber)
