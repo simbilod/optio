@@ -338,8 +338,7 @@ grating_coupler_fiber_no_silicon = partial(
 
 
 if __name__ == "__main__":
-    import matplotlib.pyplot as plt
-
+    # import matplotlib.pyplot as plt
     # grating_coupler_fiber(run=False, fiber_xposition=5)
     # plt.show()
     # grating_coupler_fiber_no_silicon()
