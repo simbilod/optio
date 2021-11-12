@@ -2,3 +2,4 @@ omegaconf==2.1.1
 numpy
 pandas
 fire
+subprocess-tee
