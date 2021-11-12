@@ -34,7 +34,7 @@ nSiO2 = 1.45
 Floats = Tuple[float, ...]
 
 
-def grating_coupler_fiber(
+def fiber(
     period: float = 0.68,
     fill_factor: float = 0.5,
     widths: Optional[Floats] = None,
@@ -332,9 +332,7 @@ def grating_coupler_fiber(
 
 
 # remove silicon to clearly see the fiber (for debugging)
-grating_coupler_fiber_no_silicon = partial(
-    grating_coupler_fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False
-)
+fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 
 
 if __name__ == "__main__":
@@ -343,4 +341,4 @@ if __name__ == "__main__":
     # plt.show()
     # grating_coupler_fiber_no_silicon()
 
-    fire.Fire(grating_coupler_fiber)
+    fire.Fire(fiber)
