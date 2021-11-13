@@ -1,0 +1,22 @@
+settings:
+  period: 0.68
+  fill_factor: 0.5
+  fiber_angle_deg: 15.0
+  fiber_xposition: -4
+  fiber_core_diameter: 10.4
+  fiber_numerical_aperture: 10.4
+  fiber_nclad: 1.45
+  resolution: 64
+  ncore: 3.47
+  nclad: 1.45
+  nsubstrate: 3.47
+  n_periods: 30
+  box_thickness: 3.0
+  clad_thickness: 2.0
+  etch_depth: 0.07
+  wavelength_min: 1.5
+  wavelength_max: 1.6
+  wavelength_points: 50
+  decay_by: 0.001
+  dtaper: 1
+compute_time_seconds: 324.47606134414673
