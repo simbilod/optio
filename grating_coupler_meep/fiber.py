@@ -34,6 +34,28 @@ nSiO2 = 1.45
 Floats = Tuple[float, ...]
 
 
+def dict_to_name(**kwargs) -> str:
+    """Returns name from a dict."""
+    kv = []
+
+    for key in sorted(kwargs):
+        if isinstance(key, str):
+            value = kwargs[key]
+            if value is not None:
+                kv += [f"{key}{to_string(value)}"]
+    return "_".join(kv)
+
+
+def to_string(value):
+    if isinstance(value, list):
+        settings_string_list = [to_string(i) for i in value]
+        return "_".join(settings_string_list)
+    if isinstance(value, dict):
+        return dict_to_name(**value)
+    else:
+        return str(value)
+
+
 def fiber(
     period: float = 0.68,
     fill_factor: float = 0.5,
@@ -80,6 +102,38 @@ def fiber(
     freqs = 1 / wavelengths
     widths = widths or n_periods * [period * fill_factor]
     gaps = gaps or n_periods * [period * (1 - fill_factor)]
+
+    settings = dict(
+        period=period,
+        fill_factor=fill_factor,
+        fiber_angle_deg=fiber_angle_deg,
+        fiber_xposition=fiber_xposition,
+        fiber_core_diameter=fiber_core_diameter,
+        fiber_numerical_aperture=fiber_core_diameter,
+        fiber_nclad=fiber_nclad,
+        resolution=resolution,
+        ncore=ncore,
+        nclad=nclad,
+        nsubstrate=nsubstrate,
+        n_periods=n_periods,
+        box_thickness=box_thickness,
+        clad_thickness=clad_thickness,
+        etch_depth=etch_depth,
+        wavelength_min=wavelength_min,
+        wavelength_max=wavelength_max,
+        wavelength_points=wavelength_points,
+        decay_by=decay_by,
+        dtaper=dtaper,
+    )
+    settings_string = to_string(settings)
+    settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
+
+    filename = f"fiber_{settings_hash}.yml"
+    dirpath = dirpath or pathlib.Path(__file__).parent / "data"
+    dirpath = pathlib.Path(dirpath)
+    dirpath.mkdir(exist_ok=True, parents=True)
+    filepath = dirpath / filename
+    filepath_csv = filepath.with_suffix(".csv")
 
     length_grating = np.sum(widths) + np.sum(gaps)
 
@@ -261,19 +315,8 @@ def fiber(
 
     if not run:
         sim.plot2D()
+        filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         return pd.DataFrame()
-
-    settings_list = widths + gaps
-    settings_string_list = [str(i) for i in settings_list]
-    settings_string = "_".join(settings_string_list)
-    settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
-
-    filename = f"fiber_{settings_hash}.yml"
-    dirpath = dirpath or pathlib.Path(__file__).parent / "data"
-    dirpath = pathlib.Path(dirpath)
-    dirpath.mkdir(exist_ok=True, parents=True)
-    filepath = dirpath / filename
-    filepath_csv = filepath.with_suffix(".csv")
 
     if filepath_csv.exists() and not overwrite:
         return pd.read_csv(filepath_csv)
@@ -313,8 +356,6 @@ def fiber(
         s22 = s11.copy()
         s21 = s12.copy()
 
-        settings = dict(period=period, fill_factor=fill_factor)
-
         simulation = dict(
             settings=settings,
             compute_time_seconds=end - start,
@@ -337,8 +378,9 @@ fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 
 if __name__ == "__main__":
     # import matplotlib.pyplot as plt
-    # grating_coupler_fiber(run=False, fiber_xposition=5)
+
+    # fiber(run=False, fiber_xposition=6)
     # plt.show()
-    # grating_coupler_fiber_no_silicon()
+    # fiber_no_silicon()
 
     fire.Fire(fiber)
