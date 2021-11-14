@@ -124,6 +124,8 @@ def fiber(
         wavelength_points=wavelength_points,
         decay_by=decay_by,
         dtaper=dtaper,
+        widths=widths,
+        gaps=gaps,
     )
     settings_string = to_string(settings)
     settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
@@ -316,6 +318,7 @@ def fiber(
     if not run:
         sim.plot2D()
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
+        print(f"write {filepath}")
         return pd.DataFrame()
 
     if filepath_csv.exists() and not overwrite:
@@ -368,7 +371,7 @@ def fiber(
         s.update({f"{key}m": list(np.abs(r[key].flatten())) for key in keys})
 
         df = pd.DataFrame(s, index=wavelengths)
-        df.to_csv(filepath_csv, index=False)
+        df.to_csv(filepath_csv, index=True)
         return df
 
 
@@ -379,7 +382,7 @@ fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 if __name__ == "__main__":
     # import matplotlib.pyplot as plt
 
-    # fiber(run=False, fiber_xposition=6)
+    # fiber(run=False, fiber_xposition=13)
     # plt.show()
     # fiber_no_silicon()
 
