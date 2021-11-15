@@ -83,6 +83,7 @@ def fiber(
     dirpath: Optional[str] = None,
     decay_by: float = 1e-3,
     dtaper: float = 1,
+    ncores: int = 1,
 ) -> pd.DataFrame:
     """Returns simulation results from grating coupler with fiber.
     na**2 = ncore**2 - nclad**2
@@ -126,6 +127,7 @@ def fiber(
         dtaper=dtaper,
         widths=widths,
         gaps=gaps,
+        ncores=ncores,
     )
     settings_string = to_string(settings)
     settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
@@ -381,9 +383,8 @@ fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 
 if __name__ == "__main__":
     # import matplotlib.pyplot as plt
-
-    # fiber(run=False, fiber_xposition=13)
-    # plt.show()
+    # fiber(run=False, fiber_xposition=0)
     # fiber_no_silicon()
+    # plt.show()
 
     fire.Fire(fiber)
