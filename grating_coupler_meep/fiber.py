@@ -28,8 +28,8 @@ import numpy as np
 import fire
 
 nm = 1e-3
-nSi = 3.47
-nSiO2 = 1.45
+nSi = 3.48
+nSiO2 = 1.44
 
 Floats = Tuple[float, ...]
 
@@ -71,7 +71,7 @@ def fiber(
     nclad: float = nSiO2,
     nsubstrate: float = nSi,
     n_periods: int = 30,
-    box_thickness: float = 3.0,
+    box_thickness: float = 2.0,
     clad_thickness: float = 2.0,
     core_thickness: float = 220 * nm,
     etch_depth: float = 70 * nm,
@@ -175,6 +175,22 @@ def fiber(
     cell_size = mp.Vector3(sxy, sz)
 
     geometry = []
+    # clad
+    geometry.append(
+        mp.Block(
+            material=clad_material,
+            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
+            size=mp.Vector3(mp.inf, clad_thickness),
+        )
+    )
+    # BOX
+    geometry.append(
+        mp.Block(
+            material=clad_material,
+            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
+            size=mp.Vector3(mp.inf, box_thickness),
+        )
+    )
     # Fiber (defined first to be overridden)
     geometry.append(
         mp.Block(
@@ -192,15 +208,6 @@ def fiber(
             size=mp.Vector3(fiber_core_diameter, hfiber_geom),
             e1=mp.Vector3(x=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
             e2=mp.Vector3(y=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
-        )
-    )
-
-    # clad
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
-            size=mp.Vector3(mp.inf, clad_thickness),
         )
     )
 
@@ -225,24 +232,6 @@ def fiber(
             )
         )
         x += width + gap
-
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(sxy - comp_origin_x - 0.5 * (dpml + dbuffer), 0)
-            - offset_vector,
-            size=mp.Vector3(dpml + dbuffer, core_thickness),
-        )
-    )
-
-    # BOX
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
-            size=mp.Vector3(mp.inf, box_thickness),
-        )
-    )
 
     # Substrate
     geometry.append(
@@ -383,8 +372,8 @@ fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 
 if __name__ == "__main__":
     # import matplotlib.pyplot as plt
-    # fiber(run=False, fiber_xposition=0)
     # fiber_no_silicon()
+    # fiber(run=False, fiber_xposition=0)
     # plt.show()
 
     fire.Fire(fiber)
