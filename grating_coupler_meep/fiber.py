@@ -339,7 +339,7 @@ def fiber(
         transmission_waveguide = sim.get_eigenmode_coefficients(
             waveguide_monitor, [1], eig_parity=mp.ODD_Z, direction=mp.X
         ).alpha
-        kpoint = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle_deg)
+        kpoint = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
         reflection_fiber = sim.get_eigenmode_coefficients(
             fiber_monitor,
             [1],
