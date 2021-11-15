@@ -55,5 +55,51 @@ def plot_fiber_xposition_spectrum(
     plt.show()
 
 
+
+def plot_fiber_angle_deg():
+    dirpath = pathlib.Path(__file__).parent / "data"
+
+
+    for filepath_csv in dirpath.glob("*.csv"):
+        filepath_yaml = filepath_csv.with_suffix(".yml")
+        settings = OmegaConf.load(filepath_yaml)
+        df = pd.read_csv(filepath_csv)
+        s21 = 10 * np.log10(df.s21m)
+
+        fiber_angle_deg = settings.settings.fiber_angle_deg
+        if fiber_angle_deg not in [15, 20]:
+            plt.plot(df.index, s21, label=str(fiber_angle_deg))
+
+    plt.xlabel("wavelength")
+    plt.ylabel("S21 (dB)")
+    plt.legend()
+    plt.show()
+
+
+def plot_ncores():
+    dirpath = pathlib.Path(__file__).parent / "data"
+
+    ncores = []
+    time = []
+
+    for filepath_csv in dirpath.glob("*.csv"):
+        filepath_yaml = filepath_csv.with_suffix(".yml")
+        settings = OmegaConf.load(filepath_yaml)
+        function_settings = settings.settings
+        if "ncores" in function_settings:
+            ncores.append(function_settings["ncores"])
+            time.append(settings["compute_time_seconds"])
+
+    plt.xlabel("ncores")
+    plt.ylabel("compute time (s)")
+    plt.plot(ncores, time, ".")
+    plt.legend()
+    plt.show()
+
+
+
+
 if __name__ == "__main__":
-    plot_fiber_xposition_spectrum()
+    # plot_fiber_xposition_spectrum()
+    # plot_ncores()
+    plot_fiber_angle_deg()
