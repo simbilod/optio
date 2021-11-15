@@ -55,10 +55,8 @@ def plot_fiber_xposition_spectrum(
     plt.show()
 
 
-
 def plot_fiber_angle_deg():
-    dirpath = pathlib.Path(__file__).parent / "data"
-
+    dirpath = pathlib.Path(__file__).parent / "data" / "fiber_sweep_angle_deg"
 
     for filepath_csv in dirpath.glob("*.csv"):
         filepath_yaml = filepath_csv.with_suffix(".yml")
@@ -67,13 +65,13 @@ def plot_fiber_angle_deg():
         s21 = 10 * np.log10(df.s21m)
 
         fiber_angle_deg = settings.settings.fiber_angle_deg
-        if fiber_angle_deg not in [15, 20]:
-            plt.plot(df.index, s21, label=str(fiber_angle_deg))
+        plt.plot(df.iloc[:, 0], s21, label=str(fiber_angle_deg))
 
     plt.xlabel("wavelength")
     plt.ylabel("S21 (dB)")
     plt.legend()
     plt.show()
+    return df
 
 
 def plot_ncores():
@@ -97,9 +95,7 @@ def plot_ncores():
     plt.show()
 
 
-
-
 if __name__ == "__main__":
     # plot_fiber_xposition_spectrum()
     # plot_ncores()
-    plot_fiber_angle_deg()
+    df = plot_fiber_angle_deg()

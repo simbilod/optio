@@ -360,9 +360,10 @@ def fiber(
         keys = [key for key in r.keys() if key.startswith("s")]
         s = {f"{key}a": list(np.unwrap(np.angle(r[key].flatten()))) for key in keys}
         s.update({f"{key}m": list(np.abs(r[key].flatten())) for key in keys})
+        s["wavelength"] = wavelengths
 
         df = pd.DataFrame(s, index=wavelengths)
-        df.to_csv(filepath_csv, index=True)
+        df.to_csv(filepath_csv, index=False)
         return df
 
 
