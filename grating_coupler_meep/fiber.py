@@ -27,6 +27,8 @@ import meep as mp
 import numpy as np
 import fire
 
+from visualization import plotStructure
+
 nm = 1e-3
 nSi = 3.48
 nSiO2 = 1.44
@@ -55,6 +57,8 @@ def to_string(value):
     else:
         return str(value)
 
+def fiber_ncore(fiber_numerical_aperture, fiber_nclad): 
+    return (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
 
 def fiber(
     period: float = 0.66,
@@ -153,9 +157,8 @@ def fiber(
     fiber_angle = np.radians(fiber_angle_deg)
     hfiber_geom = 100  # Some large number to make fiber extend into PML
 
-    fiber_ncore = (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
     fiber_clad_material = mp.Medium(index=fiber_nclad)
-    fiber_core_material = mp.Medium(index=fiber_ncore)
+    fiber_core_material = mp.Medium(index=fiber_ncore(fiber_numerical_aperture, fiber_nclad))
 
     # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
     sxy = 2 * dpml + dtaper + length_grating + 2 * dbuffer
@@ -280,34 +283,34 @@ def fiber(
     # symmetries = [mp.Mirror(mp.Y,-1)]
     symmetries = []
 
-    sim = mp.Simulation(
-        resolution=resolution,
-        cell_size=cell_size,
-        boundary_layers=boundary_layers,
-        geometry=geometry,
-        # geometry_center=mp.Vector3(x_offset, y_offset),
-        sources=sources,
-        dimensions=2,
-        symmetries=symmetries,
-        eps_averaging=True,
-    )
-
-    # Ports
+    # Ports locations
     waveguide_monitor_port = mp.ModeRegion(
         center=waveguide_port_center + mp.Vector3(x=0.2), size=waveguide_port_size
-    )
-    waveguide_monitor = sim.add_mode_monitor(
-        freqs, waveguide_monitor_port, yee_grid=True
     )
     fiber_monitor_port = mp.ModeRegion(
         center=fiber_port_center - mp.Vector3(y=0.2),
         size=fiber_port_size,
         direction=mp.NO_DIRECTION,
     )
-    fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
 
     if not run:
-        sim.plot2D()
+        sim = mp.Simulation(
+            resolution=resolution,
+            cell_size=cell_size,
+            boundary_layers=boundary_layers,
+            geometry=geometry,
+            # geometry_center=mp.Vector3(x_offset, y_offset),
+            sources=sources,
+            dimensions=2,
+            symmetries=symmetries,
+            eps_averaging=False, # Turn off subpixel averaging to better look at the geometry
+        )
+        waveguide_monitor = sim.add_mode_monitor(
+            freqs, waveguide_monitor_port, yee_grid=True
+        )
+        fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
+        plotStructure(sim, geometry, sources, waveguide_monitor, fiber_monitor)
+        # sim.plot2D()
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         print(f"write {filepath}")
         return pd.DataFrame()
@@ -316,6 +319,21 @@ def fiber(
         return pd.read_csv(filepath_csv)
 
     else:
+        sim = mp.Simulation(
+            resolution=resolution,
+            cell_size=cell_size,
+            boundary_layers=boundary_layers,
+            geometry=geometry,
+            # geometry_center=mp.Vector3(x_offset, y_offset),
+            sources=sources,
+            dimensions=2,
+            symmetries=symmetries,
+            eps_averaging=True,
+        )
+        waveguide_monitor = sim.add_mode_monitor(
+            freqs, waveguide_monitor_port, yee_grid=True
+        )
+        fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
         start = time.time()
         # Run simulation
         # sim.run(until=400)
@@ -368,13 +386,18 @@ def fiber(
 
 
 # remove silicon to clearly see the fiber (for debugging)
-fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
+#fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 
 
 if __name__ == "__main__":
-    # import matplotlib.pyplot as plt
+    import matplotlib.pyplot as plt
+    # import matplotlib
+    # matplotlib.use('TkAgg')    
+    # # fiber_no_silicon()
+    #print(fiber_ncore(0.14, nSiO2))
+    fiber(run=False, fiber_xposition=0)
     # fiber_no_silicon()
     # fiber(run=False, fiber_xposition=0)
     # plt.show()
 
-    fire.Fire(fiber)
+    # fire.Fire(fiber)
