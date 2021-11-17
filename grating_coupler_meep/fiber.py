@@ -28,18 +28,40 @@ import numpy as np
 import fire
 
 nm = 1e-3
-nSi = 3.47
-nSiO2 = 1.45
+nSi = 3.48
+nSiO2 = 1.44
 
 Floats = Tuple[float, ...]
 
 
-def grating_coupler_fiber(
-    period: float = 0.68,
+def dict_to_name(**kwargs) -> str:
+    """Returns name from a dict."""
+    kv = []
+
+    for key in sorted(kwargs):
+        if isinstance(key, str):
+            value = kwargs[key]
+            if value is not None:
+                kv += [f"{key}{to_string(value)}"]
+    return "_".join(kv)
+
+
+def to_string(value):
+    if isinstance(value, list):
+        settings_string_list = [to_string(i) for i in value]
+        return "_".join(settings_string_list)
+    if isinstance(value, dict):
+        return dict_to_name(**value)
+    else:
+        return str(value)
+
+
+def fiber(
+    period: float = 0.66,
     fill_factor: float = 0.5,
     widths: Optional[Floats] = None,
     gaps: Optional[Floats] = None,
-    fiber_angle_deg: float = 15.0,
+    fiber_angle_deg: float = 20.0,
     fiber_xposition: float = 1.0,
     fiber_core_diameter: float = 10.4,
     fiber_numerical_aperture: float = 0.14,
@@ -49,18 +71,20 @@ def grating_coupler_fiber(
     nclad: float = nSiO2,
     nsubstrate: float = nSi,
     n_periods: int = 30,
-    box_thickness: float = 3.0,
+    box_thickness: float = 2.0,
     clad_thickness: float = 2.0,
     core_thickness: float = 220 * nm,
     etch_depth: float = 70 * nm,
-    wavelength_min: float = 1.5,
-    wavelength_max: float = 1.6,
+    wavelength_min: float = 1.4,
+    wavelength_max: float = 1.7,
     wavelength_points: int = 50,
     run: bool = True,
     overwrite: bool = False,
     dirpath: Optional[str] = None,
     decay_by: float = 1e-3,
-):
+    dtaper: float = 1,
+    ncores: int = 1,
+) -> pd.DataFrame:
     """Returns simulation results from grating coupler with fiber.
     na**2 = ncore**2 - nclad**2
     ncore = sqrt(na**2 + ncore**2)
@@ -80,12 +104,48 @@ def grating_coupler_fiber(
     widths = widths or n_periods * [period * fill_factor]
     gaps = gaps or n_periods * [period * (1 - fill_factor)]
 
+    settings = dict(
+        period=period,
+        fill_factor=fill_factor,
+        fiber_angle_deg=fiber_angle_deg,
+        fiber_xposition=fiber_xposition,
+        fiber_core_diameter=fiber_core_diameter,
+        fiber_numerical_aperture=fiber_core_diameter,
+        fiber_nclad=fiber_nclad,
+        resolution=resolution,
+        ncore=ncore,
+        nclad=nclad,
+        nsubstrate=nsubstrate,
+        n_periods=n_periods,
+        box_thickness=box_thickness,
+        clad_thickness=clad_thickness,
+        etch_depth=etch_depth,
+        wavelength_min=wavelength_min,
+        wavelength_max=wavelength_max,
+        wavelength_points=wavelength_points,
+        decay_by=decay_by,
+        dtaper=dtaper,
+        widths=widths,
+        gaps=gaps,
+        ncores=ncores,
+    )
+    settings_string = to_string(settings)
+    settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
+
+    filename = f"fiber_{settings_hash}.yml"
+    dirpath = dirpath or pathlib.Path(__file__).parent / "data"
+    dirpath = pathlib.Path(dirpath)
+    dirpath.mkdir(exist_ok=True, parents=True)
+    filepath = dirpath / filename
+    filepath_csv = filepath.with_suffix(".csv")
+
+    length_grating = np.sum(widths) + np.sum(gaps)
+
     substrate_thickness = 1.0
     hair = 4
     core_material = mp.Medium(index=ncore)
     clad_material = mp.Medium(index=nclad)
 
-    dtaper = 12
     dbuffer = 0.5
     dpml = 1
 
@@ -98,7 +158,7 @@ def grating_coupler_fiber(
     fiber_core_material = mp.Medium(index=fiber_ncore)
 
     # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
-    sxy = 2 * dpml + dtaper + period * n_periods + 2 * dbuffer
+    sxy = 2 * dpml + dtaper + length_grating + 2 * dbuffer
     sz = (
         2 * dbuffer
         + box_thickness
@@ -115,6 +175,22 @@ def grating_coupler_fiber(
     cell_size = mp.Vector3(sxy, sz)
 
     geometry = []
+    # clad
+    geometry.append(
+        mp.Block(
+            material=clad_material,
+            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
+            size=mp.Vector3(mp.inf, clad_thickness),
+        )
+    )
+    # BOX
+    geometry.append(
+        mp.Block(
+            material=clad_material,
+            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
+            size=mp.Vector3(mp.inf, box_thickness),
+        )
+    )
     # Fiber (defined first to be overridden)
     geometry.append(
         mp.Block(
@@ -135,15 +211,6 @@ def grating_coupler_fiber(
         )
     )
 
-    # clad
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
-            size=mp.Vector3(mp.inf, clad_thickness),
-        )
-    )
-
     # waveguide
     geometry.append(
         mp.Block(
@@ -154,7 +221,7 @@ def grating_coupler_fiber(
     )
 
     # grating etch
-    x = 0
+    x = -length_grating / 2
     for width, gap in zip(widths, gaps):
         geometry.append(
             mp.Block(
@@ -165,24 +232,6 @@ def grating_coupler_fiber(
             )
         )
         x += width + gap
-
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(sxy - comp_origin_x - 0.5 * (dpml + dbuffer), 0)
-            - offset_vector,
-            size=mp.Vector3(dpml + dbuffer, core_thickness),
-        )
-    )
-
-    # BOX
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
-            size=mp.Vector3(mp.inf, box_thickness),
-        )
-    )
 
     # Substrate
     geometry.append(
@@ -204,7 +253,7 @@ def grating_coupler_fiber(
     # mode frequency
     fcen = 1 / wavelength
 
-    waveguide_port_center = mp.Vector3(-dtaper, 0) - offset_vector
+    waveguide_port_center = mp.Vector3(-dtaper - length_grating / 2, 0) - offset_vector
     waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
     fiber_port_center = (
         mp.Vector3(
@@ -259,19 +308,9 @@ def grating_coupler_fiber(
 
     if not run:
         sim.plot2D()
+        filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
+        print(f"write {filepath}")
         return pd.DataFrame()
-
-    settings_list = widths + gaps
-    settings_string_list = [str(i) for i in settings_list]
-    settings_string = "_".join(settings_string_list)
-    settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
-
-    filename = f"fiber_{settings_hash}.yml"
-    dirpath = dirpath or pathlib.Path(__file__).parent / "data"
-    dirpath = pathlib.Path(dirpath)
-    dirpath.mkdir(exist_ok=True, parents=True)
-    filepath = dirpath / filename
-    filepath_csv = filepath.with_suffix(".csv")
 
     if filepath_csv.exists() and not overwrite:
         return pd.read_csv(filepath_csv)
@@ -291,7 +330,7 @@ def grating_coupler_fiber(
         transmission_waveguide = sim.get_eigenmode_coefficients(
             waveguide_monitor, [1], eig_parity=mp.ODD_Z, direction=mp.X
         ).alpha
-        kpoint = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle_deg)
+        kpoint = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
         reflection_fiber = sim.get_eigenmode_coefficients(
             fiber_monitor,
             [1],
@@ -311,8 +350,6 @@ def grating_coupler_fiber(
         s22 = s11.copy()
         s21 = s12.copy()
 
-        settings = dict(period=period, fill_factor=fill_factor)
-
         simulation = dict(
             settings=settings,
             compute_time_seconds=end - start,
@@ -323,6 +360,7 @@ def grating_coupler_fiber(
         keys = [key for key in r.keys() if key.startswith("s")]
         s = {f"{key}a": list(np.unwrap(np.angle(r[key].flatten()))) for key in keys}
         s.update({f"{key}m": list(np.abs(r[key].flatten())) for key in keys})
+        s["wavelength"] = wavelengths
 
         df = pd.DataFrame(s, index=wavelengths)
         df.to_csv(filepath_csv, index=False)
@@ -330,10 +368,13 @@ def grating_coupler_fiber(
 
 
 # remove silicon to clearly see the fiber (for debugging)
-grating_coupler_fiber_no_silicon = partial(
-    grating_coupler_fiber, ncore=nSiO2, nsubstrate=nSiO2
-)
+fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 
 
 if __name__ == "__main__":
-    fire.Fire(grating_coupler_fiber)
+    # import matplotlib.pyplot as plt
+    # fiber_no_silicon()
+    # fiber(run=False, fiber_xposition=0)
+    # plt.show()
+
+    fire.Fire(fiber)
