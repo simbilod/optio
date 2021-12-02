@@ -20,7 +20,28 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib as mpl
 
-def plotStructure(sim, geometry, sources, waveguide_monitor_port, fiber_monitor_port, wl=1/1.55, cmap=plt.get_cmap('tab10'), z_cut=0):
+def port_arrow(sim, port_direction, arrow_size=0.1):
+    """
+    Given a port_direction, returns the dx and dy of the arrow
+    Uses the simulation domain to scale the arrows
+    Arrow size in % of cell size
+    """
+    # Get cell size
+    sc = sim.cell_size
+    scx = sc.x
+    scy = sc.y
+    # Parse direction
+    if type(port_direction) == int:
+        if port_direction == 0: # mp.X
+            port_direction = mp.Vector3(1,0,0)
+        elif port_direction == 1: # mp.Y
+            port_direction = mp.Vector3(0,1,0)
+    theta = np.arctan(port_direction.y/port_direction.x)
+    dx = arrow_size*scx*np.cos(theta)
+    dy = arrow_size*scy*np.sin(theta)
+    return dx, dy
+
+def plotStructure(sim, geometry, sources, sources_directions, waveguide_monitor_port, waveguide_port_direction, fiber_monitor_port, fiber_port_direction, wl=1/1.55, cmap=plt.get_cmap('tab10'), z_cut=0):
     """
     Plots the x-y index distribution of a MEEP simulation object with a custom colormap along z=z_cut cut
 
@@ -71,16 +92,18 @@ def plotStructure(sim, geometry, sources, waveguide_monitor_port, fiber_monitor_
     fig.colorbar(im, ax=ax)
 
     # Add monitors
-    for source in sources:
+    for source, source_direction in zip(sources, sources_directions):
         xi = source.center - source.size/2
         xf = source.center + source.size/2
         plt.plot([xi.x, xf.x], [xi.y, xf.y], linewidth=2, color='k')
-        #plt.arrow([xi.x, xf.x], [xi.y, xf.y], linewidth=2, color='k')
-
-    for monitor in [waveguide_monitor_port, fiber_monitor_port]:
+        dx, dy = port_arrow(sim, source_direction)
+        plt.arrow(source.center.x, source.center.y, dx, dy, width=0.1, color='k')
+    for monitor, monitor_direction in [(waveguide_monitor_port, waveguide_port_direction), (fiber_monitor_port, fiber_port_direction)]:
         xi = monitor.center - monitor.size/2
         xf = monitor.center + monitor.size/2
         plt.plot([xi.x, xf.x], [xi.y, xf.y], linewidth=2, color='gray')
+        dx, dy = port_arrow(sim, monitor_direction)
+        plt.arrow(monitor.center.x, monitor.center.y, dx, dy, width=0.1, color='gray')
 
     plt.xlabel(r'x ($\mu$m)')
     plt.ylabel(r'y ($\mu$m)')

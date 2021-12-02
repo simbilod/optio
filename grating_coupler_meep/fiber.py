@@ -160,6 +160,9 @@ def fiber(
     fiber_clad_material = mp.Medium(index=fiber_nclad)
     fiber_core_material = mp.Medium(index=fiber_ncore(fiber_numerical_aperture, fiber_nclad))
 
+
+    print(mp.Y)
+
     # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
     sxy = 2 * dpml + dtaper + length_grating + 2 * dbuffer
     sz = (
@@ -259,6 +262,7 @@ def fiber(
 
     waveguide_port_center = mp.Vector3(-dtaper - length_grating / 2, 0) - offset_vector
     waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
+    waveguide_port_direction = mp.X
     fiber_port_center = (
         mp.Vector3(
             (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle) + fiber_xposition,
@@ -267,15 +271,17 @@ def fiber(
         - offset_vector
     )
     fiber_port_size = mp.Vector3(sxy * 3 / 5 - 2 * dpml - 2, 0)
+    fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
 
     # Waveguide source
+    sources_directions = [mp.X]
     sources = [
         mp.EigenModeSource(
             src=mp.GaussianSource(fcen, fwidth=0.1 * fcen),
             size=waveguide_port_size,
             center=waveguide_port_center,
             eig_band=1,
-            direction=mp.X,
+            direction=sources_directions[0],
             eig_match_freq=True,
             eig_parity=mp.ODD_Z,
         )
@@ -310,7 +316,7 @@ def fiber(
             freqs, waveguide_monitor_port, yee_grid=True
         )
         fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
-        plotStructure(sim, geometry, sources, waveguide_monitor_port, fiber_monitor_port)
+        plotStructure(sim, geometry, sources, sources_directions, waveguide_monitor_port, waveguide_port_direction, fiber_monitor_port, fiber_port_direction)
         # sim.plot2D()
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         print(f"write {filepath}")
@@ -347,16 +353,18 @@ def fiber(
 
         # Extract mode information
         transmission_waveguide = sim.get_eigenmode_coefficients(
-            waveguide_monitor, [1], eig_parity=mp.ODD_Z, direction=mp.X
-        ).alpha
-        kpoint = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
+            waveguide_monitor, 
+            [1], 
+            eig_parity=mp.ODD_Z, 
+            direction=waveguide_port_direction
+            ).alpha
         reflection_fiber = sim.get_eigenmode_coefficients(
             fiber_monitor,
             [1],
             direction=mp.NO_DIRECTION,
             eig_parity=mp.ODD_Z,
-            kpoint_func=lambda f, n: kpoint,
-        ).alpha
+            kpoint_func=lambda f, n: fiber_port_direction
+            ).alpha
         end = time.time()
 
         a1 = transmission_waveguide[:, :, 0].flatten()  # forward wave
