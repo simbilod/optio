@@ -284,14 +284,14 @@ def fiber(
     # symmetries = [mp.Mirror(mp.Y,-1)]
     symmetries = []
 
-    # Ports locations
+    # Ports
     waveguide_monitor_port = mp.ModeRegion(
-        center=waveguide_port_center + mp.Vector3(x=0.2), size=waveguide_port_size
+        center=waveguide_port_center + mp.Vector3(x=0.2), 
+        size=waveguide_port_size
     )
     fiber_monitor_port = mp.ModeRegion(
         center=fiber_port_center - mp.Vector3(y=0.2),
-        size=fiber_port_size,
-        direction=mp.NO_DIRECTION,
+        size=fiber_port_size
     )
 
     if not run:
@@ -310,7 +310,7 @@ def fiber(
             freqs, waveguide_monitor_port, yee_grid=True
         )
         fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
-        plotStructure(sim, geometry, sources, waveguide_monitor, fiber_monitor)
+        plotStructure(sim, geometry, sources, waveguide_monitor_port, fiber_monitor_port)
         # sim.plot2D()
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         print(f"write {filepath}")

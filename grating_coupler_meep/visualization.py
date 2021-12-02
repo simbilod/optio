@@ -20,7 +20,7 @@ import matplotlib.pyplot as plt
 from matplotlib import cm
 import matplotlib as mpl
 
-def plotStructure(sim, geometry, sources, waveguide_monitor, fiber_monitor, wl=1/1.55, cmap=plt.get_cmap('tab10'), z_cut=0):
+def plotStructure(sim, geometry, sources, waveguide_monitor_port, fiber_monitor_port, wl=1/1.55, cmap=plt.get_cmap('tab10'), z_cut=0):
     """
     Plots the x-y index distribution of a MEEP simulation object with a custom colormap along z=z_cut cut
 
@@ -64,7 +64,7 @@ def plotStructure(sim, geometry, sources, waveguide_monitor, fiber_monitor, wl=1
     bounds.append(np.max(ns_unique_sorted))
     norm = mpl.colors.BoundaryNorm(bounds, len(ns_unique_sorted))
 
-    # # Manually plot simulation region
+    # # Manually plot simulation regiond
     fig, ax = plt.subplots(figsize=[10,8])
     im = plt.pcolormesh(x,y,np.transpose(np.sqrt(eps_array)),cmap=mpl.cm.ScalarMappable(cmap=cmap, norm=norm).get_cmap(), norm=norm,shading='gouraud')
     ax.set_aspect('auto')
@@ -72,10 +72,17 @@ def plotStructure(sim, geometry, sources, waveguide_monitor, fiber_monitor, wl=1
 
     # Add monitors
     for source in sources:
-        xi = source.center - source.size
-        xf = source.center + source.size
-        print(xi)
-        print(xf)
-        plt.plot(xi.x, xi.y, xf.x, xf.y, linewidth=10, color='k')
+        xi = source.center - source.size/2
+        xf = source.center + source.size/2
+        plt.plot([xi.x, xf.x], [xi.y, xf.y], linewidth=2, color='k')
+        #plt.arrow([xi.x, xf.x], [xi.y, xf.y], linewidth=2, color='k')
+
+    for monitor in [waveguide_monitor_port, fiber_monitor_port]:
+        xi = monitor.center - monitor.size/2
+        xf = monitor.center + monitor.size/2
+        plt.plot([xi.x, xf.x], [xi.y, xf.y], linewidth=2, color='gray')
+
+    plt.xlabel(r'x ($\mu$m)')
+    plt.ylabel(r'y ($\mu$m)')
 
     plt.show()
