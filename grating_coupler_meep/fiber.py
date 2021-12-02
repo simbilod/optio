@@ -178,22 +178,6 @@ def fiber(
     cell_size = mp.Vector3(sxy, sz)
 
     geometry = []
-    # clad
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
-            size=mp.Vector3(mp.inf, clad_thickness),
-        )
-    )
-    # BOX
-    geometry.append(
-        mp.Block(
-            material=clad_material,
-            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
-            size=mp.Vector3(mp.inf, box_thickness),
-        )
-    )
     # Fiber (defined first to be overridden)
     geometry.append(
         mp.Block(
@@ -211,6 +195,23 @@ def fiber(
             size=mp.Vector3(fiber_core_diameter, hfiber_geom),
             e1=mp.Vector3(x=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
             e2=mp.Vector3(y=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
+        )
+    )
+
+    # clad
+    geometry.append(
+        mp.Block(
+            material=clad_material,
+            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
+            size=mp.Vector3(mp.inf, clad_thickness),
+        )
+    )
+    # BOX
+    geometry.append(
+        mp.Block(
+            material=clad_material,
+            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
+            size=mp.Vector3(mp.inf, box_thickness),
         )
     )
 

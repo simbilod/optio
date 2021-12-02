@@ -67,9 +67,15 @@ def plotStructure(sim, geometry, sources, waveguide_monitor, fiber_monitor, wl=1
     # # Manually plot simulation region
     fig, ax = plt.subplots(figsize=[10,8])
     im = plt.pcolormesh(x,y,np.transpose(np.sqrt(eps_array)),cmap=mpl.cm.ScalarMappable(cmap=cmap, norm=norm).get_cmap(), norm=norm,shading='gouraud')
+    ax.set_aspect('auto')
     fig.colorbar(im, ax=ax)
 
     # Add monitors
-    
+    for source in sources:
+        xi = source.center - source.size
+        xf = source.center + source.size
+        print(xi)
+        print(xf)
+        plt.plot(xi.x, xi.y, xf.x, xf.y, linewidth=10, color='k')
 
     plt.show()
