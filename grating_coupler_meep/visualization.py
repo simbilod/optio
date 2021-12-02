@@ -41,20 +41,25 @@ def port_arrow(sim, port_direction, arrow_size=0.1):
     dy = arrow_size*scy*np.sin(theta)
     return dx, dy
 
-def plotStructure(sim, geometry, sources, sources_directions, waveguide_monitor_port, waveguide_port_direction, fiber_monitor_port, fiber_port_direction, wl=1/1.55, cmap=plt.get_cmap('tab10'), z_cut=0):
+def plotStructure(sim, geometry, waveguide_monitor_port, waveguide_port_direction, fiber_monitor_port, fiber_port_direction, wl=1/1.55, cmap=plt.get_cmap('tab10'), z_cut=0):
     """
     Plots the x-y index distribution of a MEEP simulation object with a custom colormap along z=z_cut cut
 
     sim (meep.simulation): MEEP simulation instance
     geometry ([meep.geometry]): list of MEEP geometric items used to generate the simulation (geometry argument in meep.sim)
-    wl (float): wavelength at which to inspect the index
-    ns ([float]): list of refractive indices
+    wl (float): wavelength at which to inspect the index:
+    waveguide_monitor_port (meep.ModeRegion): mode monitor in the waveguide
+    waveguide_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the waveguide monitor
+    fiber_monitor_port (meep.ModeRegion): mode monitor in the fiber
+    fiber_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the fiber monitor
+    cmap ([float]): colormap for plotting
     colors ([(R,G,B,alpha)]): list of colors in RGBA format (default: )
     z (float): z value at which to plot the x-y plane (default: 0)
     """
 
     # Initialize simulation
     sim.init_sim()
+    sources = sim.sources
 
     # Extract list of indices used to generate the structure
     epsilons = []
@@ -92,7 +97,8 @@ def plotStructure(sim, geometry, sources, sources_directions, waveguide_monitor_
     fig.colorbar(im, ax=ax)
 
     # Add monitors
-    for source, source_direction in zip(sources, sources_directions):
+    for source in sources:
+        source_direction = source.direction
         xi = source.center - source.size/2
         xf = source.center + source.size/2
         plt.plot([xi.x, xf.x], [xi.y, xf.y], linewidth=2, color='k')

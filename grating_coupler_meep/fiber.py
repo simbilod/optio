@@ -313,7 +313,7 @@ def fiber(
             freqs, waveguide_monitor_port, yee_grid=True
         )
         fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
-        plotStructure(sim, geometry, sources, sources_directions, waveguide_monitor_port, waveguide_port_direction, fiber_monitor_port, fiber_port_direction)
+        plotStructure(sim, geometry, waveguide_monitor_port, waveguide_port_direction, fiber_monitor_port, fiber_port_direction)
         # sim.plot2D()
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         print(f"write {filepath}")
