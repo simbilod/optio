@@ -105,6 +105,13 @@ def plotStructure(sim, geometry, sources, sources_directions, waveguide_monitor_
         dx, dy = port_arrow(sim, monitor_direction)
         plt.arrow(monitor.center.x, monitor.center.y, dx, dy, width=0.1, color='gray')
 
+    # Draw PMLs
+    dpml = sim.boundary_layers[0].thickness
+    plt.fill_between([np.min(x), np.max(x)], np.min(y), np.min(y) + dpml, facecolor="none", hatch="X", edgecolor="k", linewidth=0.0)
+    plt.fill_between([np.min(x), np.max(x)], np.max(y) - dpml, np.max(y), facecolor="none", hatch="X", edgecolor="k", linewidth=0.0)
+    plt.fill_between([np.min(x), np.min(x)+dpml], np.min(y), np.max(y), facecolor="none", hatch="X", edgecolor="k", linewidth=0.0)
+    plt.fill_between([np.max(x)-dpml, np.max(x)], np.min(y), np.max(y), facecolor="none", hatch="X", edgecolor="k", linewidth=0.0)
+
     plt.xlabel(r'x ($\mu$m)')
     plt.ylabel(r'y ($\mu$m)')
 

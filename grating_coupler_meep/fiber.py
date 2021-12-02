@@ -160,9 +160,6 @@ def fiber(
     fiber_clad_material = mp.Medium(index=fiber_nclad)
     fiber_core_material = mp.Medium(index=fiber_ncore(fiber_numerical_aperture, fiber_nclad))
 
-
-    print(mp.Y)
-
     # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
     sxy = 2 * dpml + dtaper + length_grating + 2 * dbuffer
     sz = (
@@ -270,7 +267,7 @@ def fiber(
         )
         - offset_vector
     )
-    fiber_port_size = mp.Vector3(sxy * 3 / 5 - 2 * dpml - 2, 0)
+    fiber_port_size = mp.Vector3(fiber_core_diameter + 6,0,0)
     fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
 
     # Waveguide source
