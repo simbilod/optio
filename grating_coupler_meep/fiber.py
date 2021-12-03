@@ -151,22 +151,24 @@ def fiber(
     clad_material = mp.Medium(index=nclad)
     fiber_angle = np.radians(fiber_angle_deg)
 
-    comp_origin_x = 0
     y_offset = 0
 
     # Minimally-parametrized computational cell
     # Could be further optimized
     dpml = 1
 
+    # X-domain
     dbufferx = 0.5
     if length_grating + dtaper < 3*fiber_core_diameter:
         sxy = 3*fiber_core_diameter + 2*dbufferx + 2*dpml
     else: # Fiber probably to the left
         sxy = 3/2*fiber_core_diameter + length_grating/2 + 2*dbufferx + 2*dpml
     
+    # Useful reference points
     cell_edge_left = - sxy/2 + dbufferx + dpml
     grating_start = -fiber_xposition
 
+    # Y-domain (using z notation from 3D legacy code)
     dbuffery = 0.5
     sz = (
         2 * dbuffery
@@ -176,6 +178,11 @@ def fiber(
         + substrate_thickness
         + 2 * dpml
     )
+
+    # Initialize domain x-z plane simulation
+    cell_size = mp.Vector3(sxy, sz)
+
+    # Ports (position, sizes, directions)
     fiber_offset_from_angle = (clad_thickness + core_thickness)*np.tan(fiber_angle)
     fiber_port_center = (
         mp.Vector3( (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle) + cell_edge_left + 3/2*fiber_core_diameter - fiber_offset_from_angle,
@@ -189,14 +196,11 @@ def fiber(
     waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
     waveguide_port_direction = mp.X
 
+    # Geometry
     fiber_clad = 120
     hfiber_geom = 100  # Some large number to make fiber extend into PML
 
     fiber_clad_material = mp.Medium(index=fiber_nclad)
-    fiber_core_material = mp.Medium(index=fiber_ncore(fiber_numerical_aperture, fiber_nclad))
-
-    # We will do x-z plane simulation
-    cell_size = mp.Vector3(sxy, sz)
 
     geometry = []
     # Fiber (defined first to be overridden)
