@@ -149,30 +149,51 @@ def fiber(
     hair = 4
     core_material = mp.Medium(index=ncore)
     clad_material = mp.Medium(index=nclad)
+    fiber_angle = np.radians(fiber_angle_deg)
 
-    dbuffer = 0.5
+    comp_origin_x = 0
+    y_offset = 0
+
+    # Minimally-parametrized computational cell
+    # Could be further optimized
     dpml = 1
 
-    fiber_clad = 120
-    fiber_angle = np.radians(fiber_angle_deg)
-    hfiber_geom = 100  # Some large number to make fiber extend into PML
+    dbufferx = 0.5
+    if length_grating + dtaper < 3*fiber_core_diameter:
+        sxy = 3*fiber_core_diameter + 2*dbufferx + 2*dpml
+    else: # Fiber probably to the left
+        sxy = 3/2*fiber_core_diameter + length_grating/2 + 2*dbufferx + 2*dpml
+    
+    cell_edge_left = - sxy/2 + dbufferx + dpml
+    grating_start = -fiber_xposition
 
-    fiber_clad_material = mp.Medium(index=fiber_nclad)
-    fiber_core_material = mp.Medium(index=fiber_ncore(fiber_numerical_aperture, fiber_nclad))
-
-    # MEEP's computational cell is always centered at (0,0), but code has beginning of grating at (0,0)
-    sxy = 2 * dpml + dtaper + length_grating + 2 * dbuffer
+    dbuffery = 0.5
     sz = (
-        2 * dbuffer
+        2 * dbuffery
         + box_thickness
         + core_thickness
         + hair
         + substrate_thickness
         + 2 * dpml
     )
-    comp_origin_x = 0
-    y_offset = 0
-    offset_vector = mp.Vector3(0, 0, 0)
+    fiber_offset_from_angle = (clad_thickness + core_thickness)*np.tan(fiber_angle)
+    fiber_port_center = (
+        mp.Vector3( (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle) + cell_edge_left + 3/2*fiber_core_diameter - fiber_offset_from_angle,
+            0.5 * sz - dpml + y_offset - 1,
+        )
+    )
+    fiber_port_size = mp.Vector3(3*fiber_core_diameter,0,0)
+    fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
+
+    waveguide_port_center = mp.Vector3(grating_start - dtaper, 0)
+    waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
+    waveguide_port_direction = mp.X
+
+    fiber_clad = 120
+    hfiber_geom = 100  # Some large number to make fiber extend into PML
+
+    fiber_clad_material = mp.Medium(index=fiber_nclad)
+    fiber_core_material = mp.Medium(index=fiber_ncore(fiber_numerical_aperture, fiber_nclad))
 
     # We will do x-z plane simulation
     cell_size = mp.Vector3(sxy, sz)
@@ -182,7 +203,7 @@ def fiber(
     geometry.append(
         mp.Block(
             material=fiber_clad_material,
-            center=mp.Vector3(x=fiber_xposition) - offset_vector,
+            center=mp.Vector3(x=grating_start + fiber_xposition - fiber_offset_from_angle),
             size=mp.Vector3(fiber_clad, hfiber_geom),
             e1=mp.Vector3(x=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
             e2=mp.Vector3(y=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
@@ -191,7 +212,7 @@ def fiber(
     geometry.append(
         mp.Block(
             material=fiber_core_material,
-            center=mp.Vector3(x=fiber_xposition) - offset_vector,
+            center=mp.Vector3(x=grating_start + fiber_xposition - fiber_offset_from_angle),
             size=mp.Vector3(fiber_core_diameter, hfiber_geom),
             e1=mp.Vector3(x=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
             e2=mp.Vector3(y=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
@@ -202,7 +223,7 @@ def fiber(
     geometry.append(
         mp.Block(
             material=clad_material,
-            center=mp.Vector3(0, clad_thickness / 2) - offset_vector,
+            center=mp.Vector3(0, clad_thickness / 2),
             size=mp.Vector3(mp.inf, clad_thickness),
         )
     )
@@ -210,7 +231,7 @@ def fiber(
     geometry.append(
         mp.Block(
             material=clad_material,
-            center=mp.Vector3(0, -0.5 * box_thickness) - offset_vector,
+            center=mp.Vector3(0, -0.5 * box_thickness),
             size=mp.Vector3(mp.inf, box_thickness),
         )
     )
@@ -219,19 +240,18 @@ def fiber(
     geometry.append(
         mp.Block(
             material=core_material,
-            center=mp.Vector3(0, core_thickness / 2) - offset_vector,
+            center=mp.Vector3(0, core_thickness / 2),
             size=mp.Vector3(mp.inf, core_thickness),
         )
     )
 
     # grating etch
-    x = -length_grating / 2
+    x = grating_start
     for width, gap in zip(widths, gaps):
         geometry.append(
             mp.Block(
                 material=clad_material,
-                center=mp.Vector3(x + gap / 2, core_thickness - etch_depth / 2)
-                - offset_vector,
+                center=mp.Vector3(x + gap / 2, core_thickness - etch_depth / 2),
                 size=mp.Vector3(gap, etch_depth),
             )
         )
@@ -243,11 +263,10 @@ def fiber(
             material=mp.Medium(index=nsubstrate),
             center=mp.Vector3(
                 0,
-                -0.5 * (core_thickness + substrate_thickness + dpml + dbuffer)
+                -0.5 * (core_thickness + substrate_thickness + dpml + dbuffery)
                 - box_thickness,
-            )
-            - offset_vector,
-            size=mp.Vector3(mp.inf, substrate_thickness + dpml + dbuffer),
+            ),
+            size=mp.Vector3(mp.inf, substrate_thickness + dpml + dbuffery),
         )
     )
 
@@ -256,19 +275,6 @@ def fiber(
 
     # mode frequency
     fcen = 1 / wavelength
-
-    waveguide_port_center = mp.Vector3(-dtaper - length_grating / 2, 0) - offset_vector
-    waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
-    waveguide_port_direction = mp.X
-    fiber_port_center = (
-        mp.Vector3(
-            (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle) + fiber_xposition,
-            0.5 * sz - dpml + y_offset - 1,
-        )
-        - offset_vector
-    )
-    fiber_port_size = mp.Vector3(fiber_core_diameter + 6,0,0)
-    fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
 
     # Waveguide source
     sources_directions = [mp.X]
@@ -401,7 +407,7 @@ if __name__ == "__main__":
     # matplotlib.use('TkAgg')    
     # # fiber_no_silicon()
     #print(fiber_ncore(0.14, nSiO2))
-    fiber(run=False, fiber_xposition=0)
+    fiber(run=False, fiber_xposition=0, )
     # fiber_no_silicon()
     # fiber(run=False, fiber_xposition=0)
     # plt.show()
