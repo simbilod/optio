@@ -200,7 +200,9 @@ def fiber(
     fiber_clad = 120
     hfiber_geom = 100  # Some large number to make fiber extend into PML
 
+    fiber_ncore = (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
     fiber_clad_material = mp.Medium(index=fiber_nclad)
+    fiber_core_material = mp.Medium(index=fiber_ncore)
 
     geometry = []
     # Fiber (defined first to be overridden)
