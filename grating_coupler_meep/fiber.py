@@ -192,7 +192,7 @@ def fiber(
     fiber_port_size = mp.Vector3(3*fiber_core_diameter,0,0)
     fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
 
-    waveguide_port_center = mp.Vector3(grating_start - dtaper, 0)
+    waveguide_port_center = mp.Vector3(-sxy/4) # grating_start - dtaper, 0)
     waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
     waveguide_port_direction = mp.X
 
@@ -353,7 +353,8 @@ def fiber(
         start = time.time()
         # Run simulation
         # sim.run(until=400)
-        field_monitor_point = (-dtaper, 0, 0)
+        # Location where to monitor fields decay
+        field_monitor_point = (-sxy/2 + dbufferx, 0, 0)
         sim.run(
             until_after_sources=mp.stop_when_fields_decayed(
                 dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
@@ -413,7 +414,8 @@ if __name__ == "__main__":
     # matplotlib.use('TkAgg')    
     # # fiber_no_silicon()
     #print(fiber_ncore(0.14, nSiO2))
-    fiber(run=False, fiber_xposition=0, )
+    #fiber(run=False, fiber_xposition=0, )
+    fiber(run=True, fiber_xposition=0, )
     # fiber_no_silicon()
     # fiber(run=False, fiber_xposition=0)
     # plt.show()
