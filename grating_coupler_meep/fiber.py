@@ -27,7 +27,7 @@ import meep as mp
 import numpy as np
 import fire
 
-from visualization import plotStructure
+from visualization import plotStructure_fromSimulation, animateFields
 
 nm = 1e-3
 nSi = 3.48
@@ -57,8 +57,10 @@ def to_string(value):
     else:
         return str(value)
 
-def fiber_ncore(fiber_numerical_aperture, fiber_nclad): 
+
+def fiber_ncore(fiber_numerical_aperture, fiber_nclad):
     return (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
+
 
 def fiber(
     period: float = 0.66,
@@ -83,6 +85,7 @@ def fiber(
     wavelength_max: float = 1.7,
     wavelength_points: int = 50,
     run: bool = True,
+    animate: bool = False,
     overwrite: bool = False,
     dirpath: Optional[str] = None,
     decay_by: float = 1e-3,
@@ -159,13 +162,13 @@ def fiber(
 
     # X-domain
     dbufferx = 0.5
-    if length_grating + dtaper < 3*fiber_core_diameter:
-        sxy = 3*fiber_core_diameter + 2*dbufferx + 2*dpml
-    else: # Fiber probably to the left
-        sxy = 3/2*fiber_core_diameter + length_grating/2 + 2*dbufferx + 2*dpml
-    
+    if length_grating + dtaper < 3 * fiber_core_diameter:
+        sxy = 3 * fiber_core_diameter + 2 * dbufferx + 2 * dpml
+    else:  # Fiber probably to the left
+        sxy = 3 / 2 * fiber_core_diameter + length_grating / 2 + 2 * dbufferx + 2 * dpml
+
     # Useful reference points
-    cell_edge_left = - sxy/2 + dbufferx + dpml
+    cell_edge_left = -sxy / 2 + dbufferx + dpml
     grating_start = -fiber_xposition
 
     # Y-domain (using z notation from 3D legacy code)
@@ -183,16 +186,18 @@ def fiber(
     cell_size = mp.Vector3(sxy, sz)
 
     # Ports (position, sizes, directions)
-    fiber_offset_from_angle = (clad_thickness + core_thickness)*np.tan(fiber_angle)
-    fiber_port_center = (
-        mp.Vector3( (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle) + cell_edge_left + 3/2*fiber_core_diameter - fiber_offset_from_angle,
-            0.5 * sz - dpml + y_offset - 1,
-        )
+    fiber_offset_from_angle = (clad_thickness + core_thickness) * np.tan(fiber_angle)
+    fiber_port_center = mp.Vector3(
+        (0.5 * sz - dpml + y_offset - 1) * np.sin(fiber_angle)
+        + cell_edge_left
+        + 3 / 2 * fiber_core_diameter
+        - fiber_offset_from_angle,
+        0.5 * sz - dpml + y_offset - 1,
     )
-    fiber_port_size = mp.Vector3(3*fiber_core_diameter,0,0)
+    fiber_port_size = mp.Vector3(3 * fiber_core_diameter, 0, 0)
     fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
 
-    waveguide_port_center = mp.Vector3(-sxy/4) # grating_start - dtaper, 0)
+    waveguide_port_center = mp.Vector3(-sxy / 4)  # grating_start - dtaper, 0)
     waveguide_port_size = mp.Vector3(0, 2 * clad_thickness - 0.2)
     waveguide_port_direction = mp.X
 
@@ -209,7 +214,9 @@ def fiber(
     geometry.append(
         mp.Block(
             material=fiber_clad_material,
-            center=mp.Vector3(x=grating_start + fiber_xposition - fiber_offset_from_angle),
+            center=mp.Vector3(
+                x=grating_start + fiber_xposition - fiber_offset_from_angle
+            ),
             size=mp.Vector3(fiber_clad, hfiber_geom),
             e1=mp.Vector3(x=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
             e2=mp.Vector3(y=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
@@ -218,7 +225,9 @@ def fiber(
     geometry.append(
         mp.Block(
             material=fiber_core_material,
-            center=mp.Vector3(x=grating_start + fiber_xposition - fiber_offset_from_angle),
+            center=mp.Vector3(
+                x=grating_start + fiber_xposition - fiber_offset_from_angle
+            ),
             size=mp.Vector3(fiber_core_diameter, hfiber_geom),
             e1=mp.Vector3(x=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
             e2=mp.Vector3(y=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
@@ -301,12 +310,10 @@ def fiber(
 
     # Ports
     waveguide_monitor_port = mp.ModeRegion(
-        center=waveguide_port_center + mp.Vector3(x=0.2), 
-        size=waveguide_port_size
+        center=waveguide_port_center + mp.Vector3(x=0.2), size=waveguide_port_size
     )
     fiber_monitor_port = mp.ModeRegion(
-        center=fiber_port_center - mp.Vector3(y=0.2),
-        size=fiber_port_size
+        center=fiber_port_center - mp.Vector3(y=0.2), size=fiber_port_size
     )
 
     if not run:
@@ -319,13 +326,22 @@ def fiber(
             sources=sources,
             dimensions=2,
             symmetries=symmetries,
-            eps_averaging=False, # Turn off subpixel averaging to better look at the geometry
+            eps_averaging=False,  # Turn off subpixel averaging to better look at the geometry
         )
         waveguide_monitor = sim.add_mode_monitor(
             freqs, waveguide_monitor_port, yee_grid=True
         )
         fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
-        plotStructure(sim, geometry, waveguide_monitor_port, waveguide_port_direction, fiber_monitor_port, fiber_port_direction)
+        sim.init_sim()
+        plotStructure_fromSimulation(
+            sim,
+            geometry,
+            waveguide_monitor_port,
+            waveguide_port_direction,
+            fiber_monitor_port,
+            fiber_port_direction,
+            colorbar=False,
+        )
         # sim.plot2D()
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         print(f"write {filepath}")
@@ -333,7 +349,6 @@ def fiber(
 
     if filepath_csv.exists() and not overwrite:
         return pd.read_csv(filepath_csv)
-
     else:
         sim = mp.Simulation(
             resolution=resolution,
@@ -354,27 +369,49 @@ def fiber(
         # Run simulation
         # sim.run(until=400)
         # Location where to monitor fields decay
-        field_monitor_point = (-sxy/2 + dbufferx, 0, 0)
-        sim.run(
-            until_after_sources=mp.stop_when_fields_decayed(
-                dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
+        field_monitor_point = (0, 0, 0)
+        if animate:
+            # Run while saving fields
+            sim.use_output_directory()
+            sim.run(
+                mp.at_every(0.6, mp.output_efield_z),
+                until=1
+                # until_after_sources=mp.stop_when_fields_decayed(
+                #    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
+                #    )
             )
-        )
+            # Generate MP4 from fields
+            animateFields(
+                sim,
+                geometry,
+                waveguide_monitor_port,
+                waveguide_port_direction,
+                fiber_monitor_port,
+                fiber_port_direction,
+            )
+            # Delete fields
+
+        else:
+            sim.run(
+                until_after_sources=mp.stop_when_fields_decayed(
+                    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
+                )
+            )
 
         # Extract mode information
         transmission_waveguide = sim.get_eigenmode_coefficients(
-            waveguide_monitor, 
-            [1], 
-            eig_parity=mp.ODD_Z, 
-            direction=waveguide_port_direction
-            ).alpha
+            waveguide_monitor,
+            [1],
+            eig_parity=mp.ODD_Z,
+            direction=waveguide_port_direction,
+        ).alpha
         reflection_fiber = sim.get_eigenmode_coefficients(
             fiber_monitor,
             [1],
             direction=mp.NO_DIRECTION,
             eig_parity=mp.ODD_Z,
-            kpoint_func=lambda f, n: fiber_port_direction
-            ).alpha
+            kpoint_func=lambda f, n: fiber_port_direction,
+        ).alpha
         end = time.time()
 
         a1 = transmission_waveguide[:, :, 0].flatten()  # forward wave
@@ -405,17 +442,19 @@ def fiber(
 
 
 # remove silicon to clearly see the fiber (for debugging)
-#fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
+# fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+
     # import matplotlib
-    # matplotlib.use('TkAgg')    
+    # matplotlib.use('TkAgg')
     # # fiber_no_silicon()
-    #print(fiber_ncore(0.14, nSiO2))
+    # print(fiber_ncore(0.14, nSiO2))
     #fiber(run=False, fiber_xposition=0, )
-    fiber(run=True, fiber_xposition=0, )
+    # fiber(run=True)
+    fiber(run=True, animate=True, overwrite=True)
     # fiber_no_silicon()
     # fiber(run=False, fiber_xposition=0)
     # plt.show()
