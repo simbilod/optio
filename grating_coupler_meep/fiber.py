@@ -27,7 +27,10 @@ import meep as mp
 import numpy as np
 import fire
 
-from visualization import plotStructure_fromSimulation, animateFields
+from visualization2 import plotStructure_fromSimulation
+
+sys.path.append("../../../meep_dev/meep/python/")
+from visualization import plot2D
 
 nm = 1e-3
 nSi = 3.48
@@ -333,16 +336,17 @@ def fiber(
         )
         fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
         sim.init_sim()
-        plotStructure_fromSimulation(
-            sim,
-            geometry,
-            waveguide_monitor_port,
-            waveguide_port_direction,
-            fiber_monitor_port,
-            fiber_port_direction,
-            colorbar=False,
-        )
+        # plotStructure_fromSimulation(
+        #     sim,
+        #     geometry,
+        #     waveguide_monitor_port,
+        #     waveguide_port_direction,
+        #     fiber_monitor_port,
+        #     fiber_port_direction,
+        #     colorbar=False,
+        # )
         # sim.plot2D()
+        sim.plot2D()
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         print(f"write {filepath}")
         return pd.DataFrame()
@@ -465,9 +469,9 @@ if __name__ == "__main__":
     # print(fiber_ncore(0.14, nSiO2))
     #fiber(run=False, fiber_xposition=0, )
     # fiber(run=True)
-    fiber(run=True, animate=True, overwrite=True)
+    #fiber(run=True, animate=True, overwrite=True)
     # fiber_no_silicon()
-    # fiber(run=False, fiber_xposition=0)
-    # plt.show()
+    fiber(run=False, fiber_xposition=0)
+    plt.show()
 
     # fire.Fire(fiber)

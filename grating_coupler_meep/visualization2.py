@@ -183,126 +183,126 @@ def plotStructure_fromSimulation(
     # plt.show()
     return plt
 
-def modeProfile(monitor_port):
+def modeProfile(monitor_port, port_direction):
     """
-    Returns the mode profile of the selected monitor port
+    Visualize the mode profile(s) of the selected monitor port
 
     sim (meep.simulation): MEEP simulation instance
     geometry ([meep.geometry]): list of MEEP geometric items used to generate the simulation (geometry argument in meep.sim)
     wl (float): wavelength at which to inspect the index
-    waveguide_monitor_port (meep.ModeRegion): mode monitor in the waveguide
-    waveguide_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the waveguide monitor
-    fiber_monitor_port (meep.ModeRegion): mode monitor in the fiber
-    fiber_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the fiber monitor
-    cmap ([float]): colormap for plotting
-    z (float): z value at which to plot the x-y plane (default: 0)
+    monitor_port (meep.ModeRegion): mode monitor
+    port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the waveguide monitor
     """
+
     
+    
+'''
+DEPRECATED (works, but is excruciatingly slow. More efficient to do at runtime, see MEEP functions)
+'''
+# def animateFields(
+#     sim,
+#     geometry,
+#     waveguide_monitor_port,
+#     waveguide_port_direction,
+#     fiber_monitor_port,
+#     fiber_port_direction,
+#     wl=1 / 1.55,
+#     cmap=plt.get_cmap("tab10"),
+#     h5_file="fiber-out/fiber-ez.h5",
+# ):
+#     """
+#     Generates a custom MP4 of the simulation, using custom plotStructure and a directory containing the field time slices
 
-def animateFields(
-    sim,
-    geometry,
-    waveguide_monitor_port,
-    waveguide_port_direction,
-    fiber_monitor_port,
-    fiber_port_direction,
-    wl=1 / 1.55,
-    cmap=plt.get_cmap("tab10"),
-    h5_file="fiber-out/fiber-ez.h5",
-):
-    """
-    Generates a custom MP4 of the simulation, using custom plotStructure and a directory containing the field time slices
+#     sim (meep.simulation): MEEP simulation instance
+#     geometry ([meep.geometry]): list of MEEP geometric items used to generate the simulation (geometry argument in meep.sim)
+#     wl (float): wavelength at which to inspect the index
+#     waveguide_monitor_port (meep.ModeRegion): mode monitor in the waveguide
+#     waveguide_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the waveguide monitor
+#     fiber_monitor_port (meep.ModeRegion): mode monitor in the fiber
+#     fiber_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the fiber monitor
+#     cmap ([float]): colormap for plotting
+#     z (float): z value at which to plot the x-y plane (default: 0)
+#     """
+#     # Data for animation
+#     onlyfiles = [f for f in listdir("fiber-out/") if isfile(join("fiber-out/", f))]
+#     onlyfiles = sorted([w[:-3] for w in onlyfiles])
 
-    sim (meep.simulation): MEEP simulation instance
-    geometry ([meep.geometry]): list of MEEP geometric items used to generate the simulation (geometry argument in meep.sim)
-    wl (float): wavelength at which to inspect the index
-    waveguide_monitor_port (meep.ModeRegion): mode monitor in the waveguide
-    waveguide_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the waveguide monitor
-    fiber_monitor_port (meep.ModeRegion): mode monitor in the fiber
-    fiber_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the fiber monitor
-    cmap ([float]): colormap for plotting
-    z (float): z value at which to plot the x-y plane (default: 0)
-    """
-    # Data for animation
-    onlyfiles = [f for f in listdir("fiber-out/") if isfile(join("fiber-out/", f))]
-    onlyfiles = sorted([w[:-3] for w in onlyfiles])
+#     # Structure
+#     (x, y, z, w) = sim.get_array_metadata()
 
-    # Structure
-    (x, y, z, w) = sim.get_array_metadata()
+#     # # First set up the figure, the axis, and the plot element we want to animate
+#     # fig = plotStructure_fromSimulation(
+#     #     sim,
+#     #     geometry,
+#     #     waveguide_monitor_port,
+#     #     waveguide_port_direction,
+#     #     fiber_monitor_port,
+#     #     fiber_port_direction,
+#     #     wl=1 / 1.55,
+#     #     cmap=plt.get_cmap("tab10"),
+#     #     draw_directions=True,
+#     #     colorbar=True,
+#     # )
 
-    # # First set up the figure, the axis, and the plot element we want to animate
-    # fig = plotStructure_fromSimulation(
-    #     sim,
-    #     geometry,
-    #     waveguide_monitor_port,
-    #     waveguide_port_direction,
-    #     fiber_monitor_port,
-    #     fiber_port_direction,
-    #     wl=1 / 1.55,
-    #     cmap=plt.get_cmap("tab10"),
-    #     draw_directions=True,
-    #     colorbar=True,
-    # )
+#     # fig = plotStructure_fromSimulation(
+#     # sim,
+#     # geometry,
+#     # waveguide_monitor_port,
+#     # waveguide_port_direction,
+#     # fiber_monitor_port,
+#     # fiber_port_direction,
+#     # wl=1 / 1.55,
+#     # cmap=plt.get_cmap("tab10"),
+#     # draw_directions=True,
+#     # colorbar=True,
+#     # )
+#     fig = plt.figure()
 
-    # fig = plotStructure_fromSimulation(
-    # sim,
-    # geometry,
-    # waveguide_monitor_port,
-    # waveguide_port_direction,
-    # fiber_monitor_port,
-    # fiber_port_direction,
-    # wl=1 / 1.55,
-    # cmap=plt.get_cmap("tab10"),
-    # draw_directions=True,
-    # colorbar=True,
-    # )
-    fig = plt.figure()
+#     a = np.random.random((5, 5))
+#     im = plt.imshow(a, interpolation="none")
 
-    a = np.random.random((5, 5))
-    im = plt.imshow(a, interpolation="none")
+#     # initialization function: plot the background of each frame
+#     def init():
+#         # im.set_data(np.random.random((5,5)))
+#         im = plotStructure(
+#             sim,
+#             geometry,
+#             waveguide_monitor_port,
+#             waveguide_port_direction,
+#             fiber_monitor_port,
+#             fiber_port_direction,
+#             wl=1 / 1.55,
+#             cmap=plt.get_cmap("tab10"),
+#             draw_directions=False,
+#         )
+#         return [im]
 
-    # initialization function: plot the background of each frame
-    def init():
-        # im.set_data(np.random.random((5,5)))
-        im = plotStructure(
-            sim,
-            geometry,
-            waveguide_monitor_port,
-            waveguide_port_direction,
-            fiber_monitor_port,
-            fiber_port_direction,
-            wl=1 / 1.55,
-            cmap=plt.get_cmap("tab10"),
-            draw_directions=False,
-        )
-        return [im]
+#     # animation function.  This is called sequentially
+#     frames = len(onlyfiles)
+#     def animate(i):
+#         print(onlyfiles[i])
+#         # Load data
+#         with h5py.File("fiber-out/" + onlyfiles[i] + ".h5", "r") as f:
+#             # List all groups
+#             a_group_key = list(f.keys())[0]
+#             # Get the data
+#             data = list(f["ez"])
+#         # Return data
+#         im = plt.pcolormesh(
+#             x,
+#             y,
+#             np.transpose(data),
+#         )
+#         return [im]
 
-    # animation function.  This is called sequentially
-    frames = len(onlyfiles)
-    def animate(i):
-        print(onlyfiles[i])
-        # Load data
-        with h5py.File("fiber-out/" + onlyfiles[i] + ".h5", "r") as f:
-            # List all groups
-            a_group_key = list(f.keys())[0]
-            # Get the data
-            data = list(f["ez"])
-        # Return data
-        im = plt.pcolormesh(
-            x,
-            y,
-            np.transpose(data),
-        )
-        return [im]
+#     # call the animator.  blit=True means only re-draw the parts that have changed.
+#     anim = animation.FuncAnimation(
+#         fig, animate, init_func=None, frames=10, interval=20, blit=True
+#     )
 
-    # call the animator.  blit=True means only re-draw the parts that have changed.
-    anim = animation.FuncAnimation(
-        fig, animate, init_func=None, frames=10, interval=20, blit=True
-    )
+#     anim.save("basic_animation.mp4", fps=30, extra_args=["-vcodec", "libx264"])
 
-    anim.save("basic_animation.mp4", fps=30, extra_args=["-vcodec", "libx264"])
-
-    # plt.show()
+#     # plt.show()
 
 
 if __name__ == "__main__":
