@@ -182,6 +182,21 @@ def plotStructure_fromSimulation(
 
     # plt.show()
     return plt
+
+def modeProfile(monitor_port):
+    """
+    Returns the mode profile of the selected monitor port
+
+    sim (meep.simulation): MEEP simulation instance
+    geometry ([meep.geometry]): list of MEEP geometric items used to generate the simulation (geometry argument in meep.sim)
+    wl (float): wavelength at which to inspect the index
+    waveguide_monitor_port (meep.ModeRegion): mode monitor in the waveguide
+    waveguide_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the waveguide monitor
+    fiber_monitor_port (meep.ModeRegion): mode monitor in the fiber
+    fiber_port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the fiber monitor
+    cmap ([float]): colormap for plotting
+    z (float): z value at which to plot the x-y plane (default: 0)
+    """
     
 
 def animateFields(
@@ -282,7 +297,7 @@ def animateFields(
 
     # call the animator.  blit=True means only re-draw the parts that have changed.
     anim = animation.FuncAnimation(
-        fig, animate, init_func=None, frames=int(frames/10), interval=20, blit=True
+        fig, animate, init_func=None, frames=10, interval=20, blit=True
     )
 
     anim.save("basic_animation.mp4", fps=30, extra_args=["-vcodec", "libx264"])

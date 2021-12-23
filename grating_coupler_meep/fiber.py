@@ -372,23 +372,34 @@ def fiber(
         field_monitor_point = (0, 0, 0)
         if animate:
             # Run while saving fields
-            sim.use_output_directory()
-            sim.run(
-                mp.at_every(0.6, mp.output_efield_z),
-                until=1
+            #sim.use_output_directory()
+            animate = mp.Animate2D(sim,
+                                fields=mp.Ez,
+                                realtime=False,
+                                normalize=True,
+                                field_parameters={'alpha':0.8, 'cmap':'RdBu', 'interpolation':'none'},
+                                boundary_parameters={'hatch':'o', 'linewidth':1.5, 'facecolor':'y', 'edgecolor':'b', 'alpha':0.3})
+
+            sim.run(mp.at_every(1,animate), until_after_sources=mp.stop_when_fields_decayed(
+                   dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
+                   ))
+            animate.to_mp4(30, 'testvideo.mp4')
+            # sim.run(
+            #     mp.at_every(0.6, mp.output_efield_z),
+            #     until=1
                 # until_after_sources=mp.stop_when_fields_decayed(
                 #    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
                 #    )
-            )
+            # )
             # Generate MP4 from fields
-            animateFields(
-                sim,
-                geometry,
-                waveguide_monitor_port,
-                waveguide_port_direction,
-                fiber_monitor_port,
-                fiber_port_direction,
-            )
+            # animateFields(
+            #     sim,
+            #     geometry,
+            #     waveguide_monitor_port,
+            #     waveguide_port_direction,
+            #     fiber_monitor_port,
+            #     fiber_port_direction,
+            # )
             # Delete fields
 
         else:
