@@ -295,6 +295,7 @@ def fiber(
     fcen = 1 / wavelength
 
     # Waveguide source
+    '''
     sources_directions = [mp.X]
     sources = [
         mp.EigenModeSource(
@@ -307,6 +308,7 @@ def fiber(
             eig_parity=mp.ODD_Z,
         )
     ]
+    '''
 
     # symmetries = [mp.Mirror(mp.Y,-1)]
     symmetries = []
@@ -326,15 +328,17 @@ def fiber(
             boundary_layers=boundary_layers,
             geometry=geometry,
             # geometry_center=mp.Vector3(x_offset, y_offset),
-            sources=sources,
+            # sources=sources,
             dimensions=2,
             symmetries=symmetries,
             eps_averaging=False,  # Turn off subpixel averaging to better look at the geometry
         )
+        '''
         waveguide_monitor = sim.add_mode_monitor(
             freqs, waveguide_monitor_port, yee_grid=True
         )
         fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
+        '''
         sim.init_sim()
         # plotStructure_fromSimulation(
         #     sim,
@@ -346,7 +350,17 @@ def fiber(
         #     colorbar=False,
         # )
         # sim.plot2D()
-        sim.plot2D()
+
+        epsilons = []
+        for item in geometry:
+            epsilons.append(item.material.epsilon(1 / 1.55))
+        epsilons = np.array(epsilons)[:, 0, 0]
+        eps_parameters = {}
+        eps_parameters['discrete'] = True
+        eps_parameters['discrete_eps_levels'] = epsilons
+        # eps_parameters['cmap'] = 'Set1'
+        plt.get_cmap("tab10")
+        sim.plot2D(eps_parameters=eps_parameters)
         filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
         print(f"write {filepath}")
         return pd.DataFrame()
