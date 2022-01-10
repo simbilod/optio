@@ -513,15 +513,17 @@ if __name__ == "__main__":
     # print(fiber_ncore(0.14, nSiO2))
     # fiber(run=False, fiber_xposition=0, )
     # fiber(run=True)
-    # fiber(run=True, animate=True, overwrite=True)
     # fiber_no_silicon()
     # df = fiber(run=True, animate=False, overwrite=True, fiber_xposition=1)
 
     # fire.Fire(fiber)
 
-    # Above is legacy, use below:
-    from grating_coupler_meep.get_simulation_fiber import get_GC_simulation
-    from grating_coupler_meep.get_Sparameters_fiber import get_Sparameters_fiber
+    # One way to do it
+    fiber(run=True, animate=True, overwrite=True)
 
-    sim_dict = get_GC_simulation(fiber_xposition=1, fiber_angle_deg=15)
-    df = get_Sparameters_fiber(sim_dict, overwrite=True, verbosity=2)
+    # # Another way:
+    # from grating_coupler_meep.get_simulation_fiber import get_GC_simulation
+    # from grating_coupler_meep.get_Sparameters_fiber import get_Sparameters_fiber
+
+    # sim_dict = get_GC_simulation(fiber_xposition=1, fiber_angle_deg=15)
+    # df = get_Sparameters_fiber(sim_dict, overwrite=True, verbosity=2)
