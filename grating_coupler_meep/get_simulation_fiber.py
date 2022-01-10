@@ -325,7 +325,7 @@ def get_GC_simulation(
         sim=sim,
         cell_size=cell_size,
         freqs=freqs,
-        fcen =fcen,
+        fcen=fcen,
         waveguide_monitor=waveguide_monitor,
         waveguide_port_direction=waveguide_port_direction,
         fiber_monitor=fiber_monitor,
@@ -333,7 +333,7 @@ def get_GC_simulation(
         sources=sources,
         field_monitor_point=field_monitor_point,
         initialized=False,
-        settings = settings,
+        settings=settings,
     )
 
 

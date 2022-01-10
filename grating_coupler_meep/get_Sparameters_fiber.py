@@ -86,9 +86,10 @@ def get_Sparameters_fiber(
     mp.verbosity(verbosity)
 
     settings = sim_dict["settings"]
-    settings.update({
-            "decay_by":decay_by,
-            "ncores":ncores,
+    settings.update(
+        {
+            "decay_by": decay_by,
+            "ncores": ncores,
         }
     )
 
@@ -105,8 +106,8 @@ def get_Sparameters_fiber(
     if filepath_csv.exists() and not overwrite:
         return pd.read_csv(filepath_csv)
     else:
-        sim = sim_dict['sim']
-        freqs = sim_dict['freqs']
+        sim = sim_dict["sim"]
+        freqs = sim_dict["freqs"]
         start = time.time()
         # Run simulation
         # Location where to monitor fields decay
@@ -119,9 +120,7 @@ def get_Sparameters_fiber(
                 fields=mp.Ez,
                 realtime=False,
                 normalize=True,
-                eps_parameters={
-                    "contour": True
-                },
+                eps_parameters={"contour": True},
                 field_parameters={
                     "alpha": 0.8,
                     "cmap": "RdBu",
@@ -152,12 +151,12 @@ def get_Sparameters_fiber(
             )
 
         # Extract mode information
-        waveguide_monitor = sim_dict['waveguide_monitor']
-        waveguide_port_direction = sim_dict['waveguide_port_direction']
-        fiber_monitor = sim_dict['fiber_monitor']
-        fiber_angle_deg = sim_dict['fiber_angle_deg']
-        fcen = sim_dict['fcen']
-        wavelengths=1/freqs
+        waveguide_monitor = sim_dict["waveguide_monitor"]
+        waveguide_port_direction = sim_dict["waveguide_port_direction"]
+        fiber_monitor = sim_dict["fiber_monitor"]
+        fiber_angle_deg = sim_dict["fiber_angle_deg"]
+        fcen = sim_dict["fcen"]
+        wavelengths = 1 / freqs
 
         waveguide_mode = sim.get_eigenmode_coefficients(
             waveguide_monitor,
@@ -209,6 +208,7 @@ def get_Sparameters_fiber(
         df = pd.DataFrame(s, index=wavelengths)
         df.to_csv(filepath_csv, index=False)
         return df
+
 
 if __name__ == "__main__":
     from grating_coupler_meep.get_simulation_fiber import get_GC_simulation

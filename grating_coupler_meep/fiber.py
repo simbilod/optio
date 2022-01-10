@@ -522,5 +522,6 @@ if __name__ == "__main__":
     # Above is legacy, use below:
     from grating_coupler_meep.get_simulation_fiber import get_GC_simulation
     from grating_coupler_meep.get_Sparameters_fiber import get_Sparameters_fiber
+
     sim_dict = get_GC_simulation(fiber_xposition=1, fiber_angle_deg=15)
     df = get_Sparameters_fiber(sim_dict, overwrite=True, verbosity=2)
