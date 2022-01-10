@@ -444,7 +444,10 @@ def fiber(
             [1],
             direction=mp.NO_DIRECTION,
             eig_parity=mp.ODD_Z,
-            kpoint_func=lambda f, n: fiber_port_direction,
+            kpoint_func=lambda f, n: mp.Vector3(
+                        0, fcen * 1.45, 0
+                    ).rotate(mp.Vector3(z=1), -1*np.radians(fiber_angle_deg)
+                ),  # Hardcoded index for now, pull from simulation eventually
         )
         end = time.time()
 

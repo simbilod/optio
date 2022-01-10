@@ -384,12 +384,12 @@ def get_port_1D_eigenmode(
 
     # Fiber
     eigenmode_fiber = sim.get_eigenmode(
-        direction=mp.X,
+        direction=mp.NO_DIRECTION,
         where=mp.Volume(center=center_fiber, size=size_fiber),
         band_num=band_num,
-        kpoint=-1*mp.Vector3(
+        kpoint=mp.Vector3(
                         0, fsrc * 1.45, 0
-                    ).rotate(mp.Vector3(z=1), np.radians(fiber_angle_deg)
+                    ).rotate(mp.Vector3(z=1), -1*np.radians(fiber_angle_deg)
                 ),  # Hardcoded index for now, pull from simulation eventually
         frequency=fsrc,
     )
@@ -412,10 +412,24 @@ if __name__ == "__main__":
     sim_dict = get_GC_simulation(fiber_xposition=5, fiber_angle_deg=15)
     # plot(sim_dict["sim"])
     # plt.show()
-    x_waveguide, ys_waveguide, eigenmode_waveguide, xs_fiber, y_fiber, eigenmode_fiber = get_port_1D_eigenmode(
-                                    sim_dict,
-                                    band_num=1,
-                                    fiber_angle_deg=15,)
+
+    plt.figure()
+
+    results = {}
+    for angle in [10,15]: # np.linspace(0,360,72):
+        print(angle)
+        x_waveguide, ys_waveguide, eigenmode_waveguide, xs_fiber, y_fiber, eigenmode_fiber = get_port_1D_eigenmode(
+                                        sim_dict,
+                                        band_num=1,
+                                        fiber_angle_deg=angle)
+
+        Ez_fiber = np.zeros(len(xs_fiber), dtype=np.complex128)
+        for i in range(len(xs_fiber)):
+            Ez_fiber[i] = eigenmode_fiber.amplitude(
+                        mp.Vector3(xs_fiber[i], y_fiber, 0), mp.Ez
+                    )
+
+        plt.plot(xs_fiber, np.abs(Ez_fiber))
 
     # Ez_waveguide = np.zeros(len(ys_waveguide), dtype=np.complex128)
     # for i in range(len(ys_waveguide)):
@@ -424,16 +438,22 @@ if __name__ == "__main__":
     #             )
 
     # plt.plot(ys_waveguide, np.abs(Ez_waveguide))
-    # plt.show()
+    # plt.xlabel('y (um)')
+    # plt.ylabel('Ez (a.u.)')
+    # plt.savefig('waveguide.png')
 
-    Ez_fiber = np.zeros(len(xs_fiber), dtype=np.complex128)
-    for i in range(len(xs_fiber)):
-        Ez_fiber[i] = eigenmode_fiber.amplitude(
-                    mp.Vector3(xs_fiber[i], y_fiber, 0), mp.Ez
-                )
+    # plt.figure()
 
-    plt.plot(xs_fiber, np.abs(Ez_fiber))
-    plt.show()
+    # Ez_fiber = np.zeros(len(xs_fiber), dtype=np.complex128)
+    # for i in range(len(xs_fiber)):
+    #     Ez_fiber[i] = eigenmode_fiber.amplitude(
+    #                 mp.Vector3(xs_fiber[i], y_fiber, 0), mp.Ez
+    #             )
+
+    # plt.plot(xs_fiber, np.abs(Ez_fiber))
+    plt.xlabel('x (um)')
+    plt.ylabel('Ez (a.u.)')
+    plt.savefig('fiber.png')
 
     # M1, E-field
     # plt.figure(figsize=(10, 8), dpi=100)
