@@ -183,6 +183,7 @@ def plotStructure_fromSimulation(
     # plt.show()
     return plt
 
+
 def modeProfile(monitor_port, port_direction):
     """
     Visualize the mode profile(s) of the selected monitor port
@@ -194,11 +195,10 @@ def modeProfile(monitor_port, port_direction):
     port_direction (meep.X or meep.Y or meep.Vector3): k-vector of the waveguide monitor
     """
 
-    
-    
-'''
+
+"""
 DEPRECATED (works, but is excruciatingly slow. More efficient to do at runtime, see MEEP functions)
-'''
+"""
 # def animateFields(
 #     sim,
 #     geometry,

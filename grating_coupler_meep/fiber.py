@@ -326,8 +326,8 @@ def fiber(
     epsilons = np.array(epsilons)[:, 0, 0]
 
     eps_parameters = {}
-    eps_parameters['contour'] = True
-    eps_parameters['levels'] = np.unique(epsilons)
+    eps_parameters["contour"] = True
+    eps_parameters["levels"] = np.unique(epsilons)
 
     # Running
     if not run:
@@ -342,12 +342,12 @@ def fiber(
             symmetries=symmetries,
             eps_averaging=False,  # Turn off subpixel averaging to better look at the geometry
         )
-        '''
+        """
         waveguide_monitor = sim.add_mode_monitor(
             freqs, waveguide_monitor_port, yee_grid=True
         )
         fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
-        '''
+        """
         sim.init_sim()
         # plotStructure_fromSimulation(
         #     sim,
@@ -362,7 +362,7 @@ def fiber(
 
         # eps_parameters['discrete'] = True
         # eps_parameters['discrete_eps_levels'] = epsilons
-        #eps_parameters['cmap'] = 'viridis'
+        # eps_parameters['cmap'] = 'viridis'
         # eps_parameters['discrete_eps_colors'] = ['red', 'blue', 'green', 'yellow']
         sim.plot2D(eps_parameters=eps_parameters)
 
@@ -394,25 +394,40 @@ def fiber(
         field_monitor_point = (0, 0, 0)
         if animate:
             # Run while saving fields
-            #sim.use_output_directory()
-            animate = mp.Animate2D(sim,
-                                fields=mp.Ez,
-                                realtime=False,
-                                normalize=True,
-                                eps_parameters=eps_parameters,
-                                field_parameters={'alpha':0.8, 'cmap':'RdBu', 'interpolation':'none'},
-                                boundary_parameters={'hatch':'o', 'linewidth':1.5, 'facecolor':'y', 'edgecolor':'b', 'alpha':0.3})
+            # sim.use_output_directory()
+            animate = mp.Animate2D(
+                sim,
+                fields=mp.Ez,
+                realtime=False,
+                normalize=True,
+                eps_parameters=eps_parameters,
+                field_parameters={
+                    "alpha": 0.8,
+                    "cmap": "RdBu",
+                    "interpolation": "none",
+                },
+                boundary_parameters={
+                    "hatch": "o",
+                    "linewidth": 1.5,
+                    "facecolor": "y",
+                    "edgecolor": "b",
+                    "alpha": 0.3,
+                },
+            )
 
-            sim.run(mp.at_every(1,animate), until_after_sources=mp.stop_when_fields_decayed(
-                   dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
-                   ))
-            animate.to_mp4(30, 'testvideo.mp4')
+            sim.run(
+                mp.at_every(1, animate),
+                until_after_sources=mp.stop_when_fields_decayed(
+                    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
+                ),
+            )
+            animate.to_mp4(30, "testvideo.mp4")
             # sim.run(
             #     mp.at_every(0.6, mp.output_efield_z),
             #     until=1
-                # until_after_sources=mp.stop_when_fields_decayed(
-                #    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
-                #    )
+            # until_after_sources=mp.stop_when_fields_decayed(
+            #    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
+            #    )
             # )
             # Generate MP4 from fields
             # animateFields(
@@ -444,10 +459,9 @@ def fiber(
             [1],
             direction=mp.NO_DIRECTION,
             eig_parity=mp.ODD_Z,
-            kpoint_func=lambda f, n: mp.Vector3(
-                        0, fcen * 1.45, 0
-                    ).rotate(mp.Vector3(z=1), -1*np.radians(fiber_angle_deg)
-                ),  # Hardcoded index for now, pull from simulation eventually
+            kpoint_func=lambda f, n: mp.Vector3(0, fcen * 1.45, 0).rotate(
+                mp.Vector3(z=1), -1 * np.radians(fiber_angle_deg)
+            ),  # Hardcoded index for now, pull from simulation eventually
         )
         end = time.time()
 
@@ -497,10 +511,10 @@ if __name__ == "__main__":
     # matplotlib.use('TkAgg')
     # # fiber_no_silicon()
     # print(fiber_ncore(0.14, nSiO2))
-    #fiber(run=False, fiber_xposition=0, )
+    # fiber(run=False, fiber_xposition=0, )
     # fiber(run=True)
-    #fiber(run=True, animate=True, overwrite=True)
+    # fiber(run=True, animate=True, overwrite=True)
     # fiber_no_silicon()
-    df = fiber(run=True, animate=False, overwrite=True, fiber_xposition=5)
+    df = fiber(run=True, animate=False, overwrite=True, fiber_xposition=1)
 
     # fire.Fire(fiber)
