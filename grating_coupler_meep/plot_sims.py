@@ -65,9 +65,9 @@ def plot_fiber_angle_deg():
         s21 = 10 * np.log10(df.s21m)
 
         fiber_angle_deg = settings.settings.fiber_angle_deg
-        plt.plot(df.iloc[:, 0], s21, label=str(fiber_angle_deg))
+        plt.plot(df.wavelength, s21, label=str(fiber_angle_deg))
 
-    plt.xlabel("wavelength")
+    plt.xlabel("wavelength (um)")
     plt.ylabel("S21 (dB)")
     plt.legend()
     plt.show()

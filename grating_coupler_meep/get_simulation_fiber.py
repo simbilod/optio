@@ -15,17 +15,21 @@ TODO:
 
 import sys
 from functools import partial
-from typing import Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import hashlib
 import time
 import pathlib
 import omegaconf
 import pandas as pd
+import pydantic
 
 import meep as mp
 import numpy as np
 import fire
+
+# from gdsfactory.simulation.modes import Mode
+from gdsfactory.simulation.modes.types import *
 
 # from grating_coupler_meep.visualization import plotStructure_fromSimulation
 
@@ -65,17 +69,17 @@ def fiber_ncore(fiber_numerical_aperture, fiber_nclad):
     return (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
 
 
-def fiber(
+def get_GC_simulation(
     period: float = 0.66,
     fill_factor: float = 0.5,
     widths: Optional[Floats] = None,
     gaps: Optional[Floats] = None,
-    fiber_angle_deg: float = 15.0,
+    fiber_angle_deg: float = 20.0,
     fiber_xposition: float = 1.0,
     fiber_core_diameter: float = 10.4,
     fiber_numerical_aperture: float = 0.14,
     fiber_nclad: float = nSiO2,
-    resolution: int = 64,  # pixels/um
+    res: int = 64,  # pixels/um
     ncore: float = nSi,
     nclad: float = nSiO2,
     nsubstrate: float = nSi,
@@ -84,17 +88,12 @@ def fiber(
     clad_thickness: float = 2.0,
     core_thickness: float = 220 * nm,
     etch_depth: float = 70 * nm,
-    wavelength_min: float = 1.4,
+    wavelength_min: float = 1.5,
     wavelength_max: float = 1.6,
     wavelength_points: int = 50,
-    run: bool = True,
-    animate: bool = False,
-    overwrite: bool = False,
-    dirpath: Optional[str] = None,
-    decay_by: float = 1e-3,
     dtaper: float = 1,
-    ncores: int = 1,
-) -> pd.DataFrame:
+    # **settings,
+) -> Dict[str, Any]:
     """Returns simulation results from grating coupler with fiber.
     na**2 = ncore**2 - nclad**2
     ncore = sqrt(na**2 + ncore**2)
@@ -122,7 +121,7 @@ def fiber(
         fiber_core_diameter=fiber_core_diameter,
         fiber_numerical_aperture=fiber_core_diameter,
         fiber_nclad=fiber_nclad,
-        resolution=resolution,
+        res=res,
         ncore=ncore,
         nclad=nclad,
         nsubstrate=nsubstrate,
@@ -133,21 +132,12 @@ def fiber(
         wavelength_min=wavelength_min,
         wavelength_max=wavelength_max,
         wavelength_points=wavelength_points,
-        decay_by=decay_by,
         dtaper=dtaper,
         widths=widths,
         gaps=gaps,
-        ncores=ncores,
     )
     settings_string = to_string(settings)
     settings_hash = hashlib.md5(settings_string.encode()).hexdigest()[:8]
-
-    filename = f"fiber_{settings_hash}.yml"
-    dirpath = dirpath or pathlib.Path(__file__).parent / "data"
-    dirpath = pathlib.Path(dirpath)
-    dirpath.mkdir(exist_ok=True, parents=True)
-    filepath = dirpath / filename
-    filepath_csv = filepath.with_suffix(".csv")
 
     length_grating = np.sum(widths) + np.sum(gaps)
 
@@ -308,9 +298,6 @@ def fiber(
         )
     ]
 
-    # symmetries = [mp.Mirror(mp.Y,-1)]
-    symmetries = []
-
     # Ports
     waveguide_monitor_port = mp.ModeRegion(
         center=waveguide_port_center + mp.Vector3(x=0.2), size=waveguide_port_size
@@ -319,209 +306,202 @@ def fiber(
         center=fiber_port_center - mp.Vector3(y=0.2), size=fiber_port_size
     )
 
-    # Plotting
-    epsilons = []
-    for item in geometry:
-        epsilons.append(item.material.epsilon(1 / 1.55))
-    epsilons = np.array(epsilons)[:, 0, 0]
+    sim = mp.Simulation(
+        resolution=res,
+        cell_size=cell_size,
+        boundary_layers=boundary_layers,
+        geometry=geometry,
+        sources=sources,
+        dimensions=2,
+        eps_averaging=True,
+    )
+    waveguide_monitor = sim.add_mode_monitor(
+        freqs, waveguide_monitor_port, yee_grid=True
+    )
+    fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
+    field_monitor_point = (0, 0, 0)
 
-    eps_parameters = {}
-    eps_parameters["contour"] = True
-    eps_parameters["levels"] = np.unique(epsilons)
+    return dict(
+        sim=sim,
+        cell_size=cell_size,
+        freqs=freqs,
+        fcen=fcen,
+        waveguide_monitor=waveguide_monitor,
+        waveguide_port_direction=waveguide_port_direction,
+        fiber_monitor=fiber_monitor,
+        fiber_angle_deg=fiber_angle_deg,
+        sources=sources,
+        field_monitor_point=field_monitor_point,
+        initialized=False,
+        settings=settings,
+    )
 
-    # Running
-    if not run:
-        sim = mp.Simulation(
-            resolution=resolution,
-            cell_size=cell_size,
-            boundary_layers=boundary_layers,
-            geometry=geometry,
-            # geometry_center=mp.Vector3(x_offset, y_offset),
-            sources=sources,
-            dimensions=2,
-            symmetries=symmetries,
-            eps_averaging=False,  # Turn off subpixel averaging to better look at the geometry
-        )
-        """
-        waveguide_monitor = sim.add_mode_monitor(
-            freqs, waveguide_monitor_port, yee_grid=True
-        )
-        fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
-        """
+
+def get_port_1D_eigenmode(
+    sim_dict,
+    band_num=1,
+    fiber_angle_deg=15,
+):
+    """
+
+    Args:
+        sim_dict: simulation dict
+        band_num: band number to solve for
+
+    Returns:
+        Mode object compatible with /modes plugin
+    """
+    # Initialize
+    sim = sim_dict["sim"]
+    source = sim_dict["sources"][0]
+    waveguide_monitor = sim_dict["waveguide_monitor"]
+    fiber_monitor = sim_dict["fiber_monitor"]
+
+    # Obtain source frequency
+    fsrc = source.src.frequency
+
+    # Obtain xsection
+    center_fiber = fiber_monitor.regions[0].center
+    size_fiber = fiber_monitor.regions[0].size
+    center_waveguide = waveguide_monitor.regions[0].center
+    size_waveguide = waveguide_monitor.regions[0].size
+
+    # Solve for the modes
+    if sim_dict["initialized"] is False:
         sim.init_sim()
-        # plotStructure_fromSimulation(
-        #     sim,
-        #     geometry,
-        #     waveguide_monitor_port,
-        #     waveguide_port_direction,
-        #     fiber_monitor_port,
-        #     fiber_port_direction,
-        #     colorbar=False,
-        # )
-        # sim.plot2D()
+        sim_dict["initialized"] = True
 
-        # eps_parameters['discrete'] = True
-        # eps_parameters['discrete_eps_levels'] = epsilons
-        # eps_parameters['cmap'] = 'viridis'
-        # eps_parameters['discrete_eps_colors'] = ['red', 'blue', 'green', 'yellow']
-        sim.plot2D(eps_parameters=eps_parameters)
+    # Waveguide
+    eigenmode_waveguide = sim.get_eigenmode(
+        direction=mp.X,
+        where=mp.Volume(center=center_waveguide, size=size_waveguide),
+        band_num=band_num,
+        kpoint=mp.Vector3(
+            fsrc * 3.48, 0, 0
+        ),  # Hardcoded index for now, pull from simulation eventually
+        frequency=fsrc,
+    )
+    ys_waveguide = np.linspace(
+        center_waveguide.y - size_waveguide.y / 2,
+        center_waveguide.y + size_waveguide.y / 2,
+        int(sim.resolution * size_waveguide.y),
+    )
+    x_waveguide = center_waveguide.x
 
-        filepath.write_text(omegaconf.OmegaConf.to_yaml(settings))
-        print(f"write {filepath}")
-        return pd.DataFrame()
+    # Fiber
+    eigenmode_fiber = sim.get_eigenmode(
+        direction=mp.NO_DIRECTION,
+        where=mp.Volume(center=center_fiber, size=size_fiber),
+        band_num=band_num,
+        kpoint=mp.Vector3(0, fsrc * 1.45, 0).rotate(
+            mp.Vector3(z=1), -1 * np.radians(fiber_angle_deg)
+        ),  # Hardcoded index for now, pull from simulation eventually
+        frequency=fsrc,
+    )
+    xs_fiber = np.linspace(
+        center_fiber.x - size_fiber.x / 2,
+        center_fiber.x + size_fiber.x / 2,
+        int(sim.resolution * size_fiber.x),
+    )
+    y_fiber = center_fiber.y
 
-    if filepath_csv.exists() and not overwrite:
-        return pd.read_csv(filepath_csv)
-    else:
-        sim = mp.Simulation(
-            resolution=resolution,
-            cell_size=cell_size,
-            boundary_layers=boundary_layers,
-            geometry=geometry,
-            sources=sources,
-            dimensions=2,
-            symmetries=symmetries,
-            eps_averaging=True,
-        )
-        waveguide_monitor = sim.add_mode_monitor(
-            freqs, waveguide_monitor_port, yee_grid=True
-        )
-        fiber_monitor = sim.add_mode_monitor(freqs, fiber_monitor_port)
-        start = time.time()
-        # Run simulation
-        # sim.run(until=400)
-        # Location where to monitor fields decay
-        field_monitor_point = (0, 0, 0)
-        if animate:
-            # Run while saving fields
-            # sim.use_output_directory()
-            animate = mp.Animate2D(
-                sim,
-                fields=mp.Ez,
-                realtime=False,
-                normalize=True,
-                eps_parameters=eps_parameters,
-                field_parameters={
-                    "alpha": 0.8,
-                    "cmap": "RdBu",
-                    "interpolation": "none",
-                },
-                boundary_parameters={
-                    "hatch": "o",
-                    "linewidth": 1.5,
-                    "facecolor": "y",
-                    "edgecolor": "b",
-                    "alpha": 0.3,
-                },
-            )
-
-            sim.run(
-                mp.at_every(1, animate),
-                until_after_sources=mp.stop_when_fields_decayed(
-                    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
-                ),
-            )
-            animate.to_mp4(30, "testvideo.mp4")
-            # sim.run(
-            #     mp.at_every(0.6, mp.output_efield_z),
-            #     until=1
-            # until_after_sources=mp.stop_when_fields_decayed(
-            #    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
-            #    )
-            # )
-            # Generate MP4 from fields
-            # animateFields(
-            #     sim,
-            #     geometry,
-            #     waveguide_monitor_port,
-            #     waveguide_port_direction,
-            #     fiber_monitor_port,
-            #     fiber_port_direction,
-            # )
-            # Delete fields
-
-        else:
-            sim.run(
-                until_after_sources=mp.stop_when_fields_decayed(
-                    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
-                )
-            )
-
-        # Extract mode information
-        waveguide_mode = sim.get_eigenmode_coefficients(
-            waveguide_monitor,
-            [1],
-            eig_parity=mp.ODD_Z,
-            direction=waveguide_port_direction,
-        )
-        fiber_mode = sim.get_eigenmode_coefficients(
-            fiber_monitor,
-            [1],
-            direction=mp.NO_DIRECTION,
-            eig_parity=mp.ODD_Z,
-            kpoint_func=lambda f, n: mp.Vector3(0, fcen * 1.45, 0).rotate(
-                mp.Vector3(z=1), -1 * np.radians(fiber_angle_deg)
-            ),  # Hardcoded index for now, pull from simulation eventually
-        )
-        end = time.time()
-
-        a1 = waveguide_mode.alpha[:, :, 0].flatten()  # forward wave
-        b1 = waveguide_mode.alpha[:, :, 1].flatten()  # backward wave
-
-        # Since waveguide port is oblique, figure out forward and backward direction
-        kdom_fiber = fiber_mode.kdom[0]
-        idx = 1 - (kdom_fiber.y > 0) * 1
-
-        print(kdom_fiber)
-        print(idx)
-
-        a2 = fiber_mode.alpha[:, :, idx].flatten()  # forward wave
-        b2 = fiber_mode.alpha[:, :, 1 - idx].flatten()  # backward wave
-
-        s11 = np.squeeze(b1 / a1)
-        s12 = np.squeeze(a2 / a1)
-        s22 = s11.copy()
-        s21 = s12.copy()
-
-        simulation = dict(
-            settings=settings,
-            compute_time_seconds=end - start,
-        )
-        filepath.write_text(omegaconf.OmegaConf.to_yaml(simulation))
-
-        r = dict(s11=s11, s12=s12, s21=s21, s22=s22, wavelengths=wavelengths)
-        keys = [key for key in r.keys() if key.startswith("s")]
-        s = {f"{key}a": list(np.unwrap(np.angle(r[key].flatten()))) for key in keys}
-        s.update({f"{key}m": list(np.abs(r[key].flatten())) for key in keys})
-        s["wavelength"] = wavelengths
-
-        df = pd.DataFrame(s, index=wavelengths)
-        df.to_csv(filepath_csv, index=False)
-        return df
+    return (
+        x_waveguide,
+        ys_waveguide,
+        eigenmode_waveguide,
+        xs_fiber,
+        y_fiber,
+        eigenmode_fiber,
+    )
 
 
-# remove silicon to clearly see the fiber (for debugging)
-# fiber_no_silicon = partial(fiber, ncore=nSiO2, nsubstrate=nSiO2, run=False)
+def plot(sim):
+    """
+    sim: simulation object
+    """
+    sim.plot2D(eps_parameters={"contour": True})
+    # plt.colorbar()
 
 
 if __name__ == "__main__":
     import matplotlib.pyplot as plt
+    import inspect
 
-    # import matplotlib
-    # matplotlib.use('TkAgg')
-    # # fiber_no_silicon()
-    # print(fiber_ncore(0.14, nSiO2))
-    # fiber(run=False, fiber_xposition=0, )
-    # fiber(run=True)
-    # fiber(run=True, animate=True, overwrite=True)
-    # fiber_no_silicon()
-    # df = fiber(run=True, animate=False, overwrite=True, fiber_xposition=1)
+    # sim_dict = get_GC_simulation(fiber_xposition=5, fiber_angle_deg=15)
+    # # plot(sim_dict["sim"])
+    # # plt.show()
+
+    # plt.figure()
+
+    # results = {}
+    # for angle in [10, 15]:  # np.linspace(0,360,72):
+    #     print(angle)
+    #     (
+    #         x_waveguide,
+    #         ys_waveguide,
+    #         eigenmode_waveguide,
+    #         xs_fiber,
+    #         y_fiber,
+    #         eigenmode_fiber,
+    #     ) = get_port_1D_eigenmode(sim_dict, band_num=1, fiber_angle_deg=angle)
+
+    #     Ez_fiber = np.zeros(len(xs_fiber), dtype=np.complex128)
+    #     for i in range(len(xs_fiber)):
+    #         Ez_fiber[i] = eigenmode_fiber.amplitude(
+    #             mp.Vector3(xs_fiber[i], y_fiber, 0), mp.Ez
+    #         )
+
+    #     plt.plot(xs_fiber, np.abs(Ez_fiber))
+
+    # # Ez_waveguide = np.zeros(len(ys_waveguide), dtype=np.complex128)
+    # # for i in range(len(ys_waveguide)):
+    # #     Ez_waveguide[i] = eigenmode_waveguide.amplitude(
+    # #                 mp.Vector3(x_waveguide, ys_waveguide[i], 0), mp.Ez
+    # #             )
+
+    # # plt.plot(ys_waveguide, np.abs(Ez_waveguide))
+    # # plt.xlabel('y (um)')
+    # # plt.ylabel('Ez (a.u.)')
+    # # plt.savefig('waveguide.png')
+
+    # # plt.figure()
+
+    # # Ez_fiber = np.zeros(len(xs_fiber), dtype=np.complex128)
+    # # for i in range(len(xs_fiber)):
+    # #     Ez_fiber[i] = eigenmode_fiber.amplitude(
+    # #                 mp.Vector3(xs_fiber[i], y_fiber, 0), mp.Ez
+    # #             )
+
+    # # plt.plot(xs_fiber, np.abs(Ez_fiber))
+    # plt.xlabel("x (um)")
+    # plt.ylabel("Ez (a.u.)")
+    # plt.savefig("fiber.png")
+
+    # M1, E-field
+    # plt.figure(figsize=(10, 8), dpi=100)
+    # plt.suptitle(
+    #     "MEEP get_eigenmode / MPB find_modes / Lumerical (manual)",
+    #     y=1.05,
+    #     fontsize=18,
+    # )
+
+    # plt.subplot(2, 2, 1)
+    # mode_waveguide.plot_ez(show=False, operation=np.abs, scale=False)
+
+    # plt.subplot(2, 2, 2)
+    # mode_fiber.plot_ez(show=False, operation=np.abs, scale=False)
+
+    # plt.subplot(2, 2, 3)
+    # mode_waveguide.plot_hz(show=False, operation=np.abs, scale=False)
+
+    # plt.subplot(2, 2, 4)
+    # mode_fiber.plot_hz(show=False, operation=np.abs, scale=False)
+
+    # plt.tight_layout()
+    # plt.show()
 
     # fire.Fire(fiber)
 
-    # Above is legacy, use below:
-    from grating_coupler_meep.get_simulation_fiber import get_GC_simulation
-    from grating_coupler_meep.get_Sparameters_fiber import get_Sparameters_fiber
-
-    sim_dict = get_GC_simulation(fiber_xposition=1, fiber_angle_deg=15)
-    df = get_Sparameters_fiber(sim_dict, overwrite=True, verbosity=2)
+    # sim_dict = get_GC_simulation(fiber_xposition=1, fiber_angle_deg=15)
+    # plot(sim_dict['sim'])
+    # plt.show()

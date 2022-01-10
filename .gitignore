@@ -144,3 +144,7 @@ cython_debug/
 *.DS_Store
 .DS_Store
 *Thumbs.db
+
+# Data
+*.h5
+*.mp4
