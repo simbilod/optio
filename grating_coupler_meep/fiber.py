@@ -84,7 +84,7 @@ def fiber(
     clad_thickness: float = 2.0,
     core_thickness: float = 220 * nm,
     etch_depth: float = 70 * nm,
-    wavelength_min: float = 1.5,
+    wavelength_min: float = 1.4,
     wavelength_max: float = 1.6,
     wavelength_points: int = 50,
     run: bool = True,
@@ -515,6 +515,12 @@ if __name__ == "__main__":
     # fiber(run=True)
     # fiber(run=True, animate=True, overwrite=True)
     # fiber_no_silicon()
-    df = fiber(run=True, animate=False, overwrite=True, fiber_xposition=1)
+    # df = fiber(run=True, animate=False, overwrite=True, fiber_xposition=1)
 
     # fire.Fire(fiber)
+
+    # Above is legacy, use below:
+    from grating_coupler_meep.get_simulation_fiber import get_GC_simulation
+    from grating_coupler_meep.get_Sparameters_fiber import get_Sparameters_fiber
+    sim_dict = get_GC_simulation(fiber_xposition=1, fiber_angle_deg=15)
+    df = get_Sparameters_fiber(sim_dict, overwrite=True, verbosity=2)
