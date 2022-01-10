@@ -7,16 +7,20 @@ Folder "fiber" contains scripts to simulate the S-parameters of the fundamental 
 
 USAGE
 
-Within each folder, python file "gc_outcoupler.py" contains an "initialize" function to create the geometry. It returns the MEEP simulation object and monitors. The "main" function takes this object, performs the simulation, and saves it to a timestamped pickle file with results and inputs.
-Jupyter notebooks within each folder help : (1) observe the geometry computed by initialize and (2) parse the pickle files to compare results form various geometries.
+Example use:
+```
+# Define and run simulation
+df = fiber(run=True, overwrite=True)
+# Analyze results
+<...>
+```
+`df` is a Pandas dataframe containing the S-parameters vs wavelength. If `overwrite` is true, a `csv` file is (over)written with the results. Further executions of the function will load the results, allowing easy plotting in other scripts or notebooks.
 
 TODO
 
-* Add a class to define and hold geometry (instead of semi-hardcoding) and share across analyses
-* Extend to partial etch processes
+* Unittests w/ quantitative comparison to benchmark
 * Improve parameter sweep interface
 * Add optimization (NLopt)
-* Add tests
 
 Clean up
 
