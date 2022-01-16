@@ -102,6 +102,7 @@ def get_Sparameters_fiber(
     dirpath.mkdir(exist_ok=True, parents=True)
     filepath = dirpath / filename
     filepath_csv = filepath.with_suffix(".csv")
+    filepath_mp4 = filepath.with_suffix(".mp4")
 
     if filepath_csv.exists() and not overwrite:
         return pd.read_csv(filepath_csv)
@@ -110,8 +111,17 @@ def get_Sparameters_fiber(
         freqs = sim_dict["freqs"]
         start = time.time()
         # Run simulation
-        # Location where to monitor fields decay
-        field_monitor_point = (0, 0, 0)
+        # Locations where to monitor fields decay
+        termination = []
+        for monitor in [sim_dict["waveguide_monitor"], sim_dict["fiber_monitor"]]:
+            termination.append(
+                mp.stop_when_fields_decayed(
+                    dt=50,
+                    c=mp.Ez,
+                    pt=monitor.regions[0].center,
+                    decay_by=1e-9,
+                )
+            )
         if animate:
             # Run while saving fields
             # sim.use_output_directory()
@@ -137,18 +147,12 @@ def get_Sparameters_fiber(
 
             sim.run(
                 mp.at_every(1, animate),
-                until_after_sources=mp.stop_when_fields_decayed(
-                    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
-                ),
-            )
-            animate.to_mp4(30, ".mp4")
+                until_after_sources=termination)
+            animate.to_mp4(15, filepath_mp4)
 
         else:
             sim.run(
-                until_after_sources=mp.stop_when_fields_decayed(
-                    dt=50, c=mp.Ez, pt=field_monitor_point, decay_by=decay_by
-                )
-            )
+                until_after_sources=termination)
 
         # Extract mode information
         waveguide_monitor = sim_dict["waveguide_monitor"]
@@ -182,9 +186,6 @@ def get_Sparameters_fiber(
         kdom_fiber = fiber_mode.kdom[0]
         idx = 1 - (kdom_fiber.y > 0) * 1
 
-        print(kdom_fiber)
-        print(idx)
-
         a2 = fiber_mode.alpha[:, :, idx].flatten()  # forward wave
         b2 = fiber_mode.alpha[:, :, 1 - idx].flatten()  # backward wave
 
@@ -211,7 +212,35 @@ def get_Sparameters_fiber(
 
 
 if __name__ == "__main__":
-    from grating_coupler_meep.get_simulation_fiber import get_GC_simulation
+    from grating_coupler_meep.get_simulation_fiber import get_simulation_fiber_clean
 
-    sim_dict = get_GC_simulation(fiber_xposition=1, fiber_angle_deg=15)
+    fiber_numerical_aperture = float(np.sqrt(1.44427**2 - 1.43482**2))
+
+    sim_dict = get_simulation_fiber_clean(
+        # grating parameters
+        period = 0.66,
+        fill_factor = 0.5,
+        n_periods = 50,
+        etch_depth = 70 * nm,
+        # fiber parameters,
+        fiber_angle_deg = 10.0,
+        fiber_xposition = 0.0,
+        fiber_core_diameter = 9,
+        fiber_numerical_aperture = fiber_numerical_aperture,
+        fiber_nclad = nSiO2,
+        # material parameters
+        ncore = nSi,
+        ncladtop = nSiO2,
+        ncladbottom = nSiO2,
+        nsubstrate = nSi,
+        # stack parameters
+        pml_thickness = 1.0,
+        substrate_thickness = 1.0,
+        bottom_clad_thickness = 2.0,
+        core_thickness = 220 * nm,
+        top_clad_thickness = 2.0,
+        air_gap_thickness = 1.0,
+        fiber_thickness = 2.0,
+        # simulation parameters
+    )
     df = get_Sparameters_fiber(sim_dict, overwrite=True, verbosity=2)

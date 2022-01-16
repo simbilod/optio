@@ -498,12 +498,15 @@ def get_simulation_fiber_clean(
     waveguide_port_y = -sz / 2 + (
             + pml_thickness 
             + substrate_thickness 
-            + bottom_clad_thickness 
+            + bottom_clad_thickness / 2
             + core_thickness / 2
+            + top_clad_thickness / 2
         )
     waveguide_port_x = grating_start - waveguide_port_x_offset_from_grating_start
     waveguide_port_center = mp.Vector3(waveguide_port_x, waveguide_port_y)  # grating_start - dtaper, 0)
-    waveguide_port_size = mp.Vector3(0, 8 * core_thickness)
+    waveguide_port_size = mp.Vector3(0, bottom_clad_thickness
+            + core_thickness / 2
+            + top_clad_thickness)
     waveguide_port_direction = mp.X
 
     # Geometry
@@ -903,6 +906,8 @@ if __name__ == "__main__":
     # plot(sim_dict['sim'], eps_parameters=eps_parameters)
     # plt.show()
 
+    fiber_numerical_aperture = float(np.sqrt(1.44427**2 - 1.43482**2))
+
     sim_dict = get_simulation_fiber_clean(
     # grating parameters
     period = 0.66,
@@ -911,15 +916,15 @@ if __name__ == "__main__":
     etch_depth = 70 * nm,
     # fiber parameters,
     fiber_angle_deg = 20.0,
-    fiber_xposition = 5.0,
-    fiber_core_diameter = 10.4,
-    fiber_numerical_aperture = 0.14,
+    fiber_xposition = 0.0,
+    fiber_core_diameter = 9,
+    fiber_numerical_aperture = fiber_numerical_aperture,
     fiber_nclad = nSiO2,
     # material parameters
-    ncore = nSi,
-    ncladtop = nSiO2,
-    ncladbottom = nSiO2,
-    nsubstrate = nSi,
+    ncore = 3.47,
+    ncladtop = 1.44,
+    ncladbottom = 1.44,
+    nsubstrate = 3.47,
     # stack parameters
     pml_thickness = 1.0,
     substrate_thickness = 1.0,
