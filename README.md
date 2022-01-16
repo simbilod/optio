@@ -1,11 +1,12 @@
 # optIO
 
-Open-source simulation and optimization of OPTical IO to integrated photonic chips through MEEP and MPB [4,5]. Currently supports 2D simulations of grating couplers as referenced in [1,2].
+Open-source simulation and optimization of OPTical IO to integrated photonic chips through MEEP and MPB [1,2]. Currently supports 2D simulations of grating couplers as referenced in [3,4].
 
 ## TODO
 
 * Usage documentation
 * Unittests w/ quantitative comparison to benchmark
+* Material dispersion
 * Improve parameter sweep interface
 * Add optimization (NLopt)
 * Clean up
