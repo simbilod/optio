@@ -250,7 +250,6 @@ def get_Sparameters_fiber(
     verbosity=0,
 ) -> pd.DataFrame:
 
-    print("getting simulation")
     sim_dict = get_simulation_fiber(
         # grating parameters
         period=period,
@@ -283,7 +282,6 @@ def get_Sparameters_fiber(
         fiber_port_y_offset_from_air=fiber_port_y_offset_from_air,
         waveguide_port_x_offset_from_grating_start=waveguide_port_x_offset_from_grating_start,
     )
-    print("computing Sparams")
     df = get_Sparameters_simulation(
         sim_dict,
         run=run,
@@ -348,9 +346,9 @@ def write_sparameters_meep_parallel(
     proc = subprocess.Popen(
         shlex.split(command),
         shell=False,
-        stdin=subprocess.PIPE,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        stdin=None,
+        stdout=None,
+        stderr=None,
     )
 
     return proc
@@ -434,7 +432,7 @@ if __name__ == "__main__":
 
     fiber_numerical_aperture = float(np.sqrt(1.44427 ** 2 - 1.43482 ** 2))
 
-    instance = dict(
+    instance1 = dict(
         # grating parameters
         period=0.66,
         fill_factor=0.5,
@@ -468,13 +466,16 @@ if __name__ == "__main__":
         waveguide_port_x_offset_from_grating_start=10,
         # Computation parameters
         overwrite=True,
-        verbosity=2,
+        verbosity=0,
         decay_by=1e-3,
     )
 
+    instance2 = instance1.copy()
+    instance2["period"] = 0.5
+
     write_sparameters_meep_parallel_pools(
-        instances=[instance],
+        instances=[instance1, instance2],
         cores_per_instance=4,
-        total_cores=4,
+        total_cores=8,
         verbosity=True,
     )
