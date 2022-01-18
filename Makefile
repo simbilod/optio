@@ -15,7 +15,7 @@ test:
 	pytest
 
 cov:
-	pytest --cov= grating_coupler_meep
+	pytest --cov= optio
 
 mypy:
 	mypy . --ignore-missing-imports
@@ -24,13 +24,13 @@ lint:
 	flake8
 
 pylint:
-	pylint grating_coupler_meep
+	pylint optio
 
 lintd2:
 	flake8 --select RST
 
 lintd:
-	pydocstyle grating_coupler_meep
+	pydocstyle optio
 
 doc8:
 	doc8 docs/

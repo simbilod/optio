@@ -1,6 +1,6 @@
 from recommonmark.transform import AutoStructify
 
-project = "grating_coupler_meep"
+project = "optio"
 version = "0.0.1"
 copyright = "2020, Simon Bilodeau"
 author = "Simon Bilodeau"

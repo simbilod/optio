@@ -1,7 +1,7 @@
-grating_coupler_meep
+optio
 ===================================
 
 Config
 ---------------------
 
-.. automodule:: grating_coupler_meep.config
+.. automodule:: optio.config

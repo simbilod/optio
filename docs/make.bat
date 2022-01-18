@@ -9,7 +9,7 @@ if "%SPHINXBUILD%" == "" (
 )
 set SOURCEDIR=source
 set BUILDDIR=build
-set SPHINXPROJ=grating_coupler_meep
+set SPHINXPROJ=optio
 
 if "%1" == "" goto help
 

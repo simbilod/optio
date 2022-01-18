@@ -1,4 +1,4 @@
-# grating_coupler_meep
+# optio
 
 Sample scripts to perform 2D grating coupler simulation using the open-source FDTD software MEEP
 

@@ -1,6 +1,6 @@
 SPHINXOPTS    =
 SPHINXBUILD   = sphinx-build
-SPHINXPROJ    = grating_coupler_meep
+SPHINXPROJ    = optio
 SOURCEDIR     = .
 BUILDDIR      = build
 
@@ -17,7 +17,7 @@ help:
 
 upload:
 	mkdir -p site
-	rsync -rv build/html/ site/grating_coupler_meep
+	rsync -rv build/html/ site/optio
 
 open:
 	open build/html/index.html

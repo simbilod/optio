@@ -19,9 +19,9 @@ def get_install_requires():
 
 
 setup(
-    name="grating_coupler_meep",
+    name="optio",
     version="0.0.1",
-    url="https://github.com/simbilod/grating_coupler_meep",
+    url="https://github.com/simbilod/optio",
     license="MIT",
     author="Simon Bilodeau",
     author_email="<46427609+simbilod@users.noreply.github.com>",
