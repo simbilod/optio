@@ -67,6 +67,7 @@ def to_string(value):
 def fiber_ncore(fiber_numerical_aperture, fiber_nclad):
     return (fiber_numerical_aperture ** 2 + fiber_nclad ** 2) ** 0.5
 
+
 def get_simulation_fiber(
     # grating parameters
     period: float = 0.66,
@@ -100,8 +101,8 @@ def get_simulation_fiber(
     wavelength_max: float = 1.7,
     wavelength_points: int = 150,
     eps_averaging: bool = False,
-    fiber_port_y_offset_from_air: float=1,
-    waveguide_port_x_offset_from_grating_start: float=10,
+    fiber_port_y_offset_from_air: float = 1,
+    waveguide_port_x_offset_from_grating_start: float = 10,
     # **settings,
 ) -> Dict[str, Any]:
     """Returns simulation results from grating coupler with fiber.
@@ -160,7 +161,7 @@ def get_simulation_fiber(
 
     # Z (Y)-domain
     sz = (
-        + pml_thickness
+        +pml_thickness
         + substrate_thickness
         + bottom_clad_thickness
         + core_thickness
@@ -171,9 +172,19 @@ def get_simulation_fiber(
     )
     # XY (X)-domain
     # Assume fiber port dominates
-    fiber_port_y = (-sz / 2 + core_thickness + top_clad_thickness + air_gap_thickness + fiber_port_y_offset_from_air)
+    fiber_port_y = (
+        -sz / 2
+        + core_thickness
+        + top_clad_thickness
+        + air_gap_thickness
+        + fiber_port_y_offset_from_air
+    )
     fiber_port_x_offset_from_angle = np.abs(fiber_port_y * np.tan(fiber_angle))
-    sxy = 3.5 * fiber_core_diameter + 2 * pml_thickness + 2 * fiber_port_x_offset_from_angle
+    sxy = (
+        3.5 * fiber_core_diameter
+        + 2 * pml_thickness
+        + 2 * fiber_port_x_offset_from_angle
+    )
 
     # length_grating = np.sum(widths) + np.sum(gaps)
 
@@ -186,40 +197,41 @@ def get_simulation_fiber(
     fiber_core_material = mp.Medium(index=fiber_ncore)
 
     # Useful reference point
-    grating_start = -fiber_xposition # Since fiber dominates, keep it centered and offset the grating
+    grating_start = (
+        -fiber_xposition
+    )  # Since fiber dominates, keep it centered and offset the grating
 
     # Initialize domain x-z plane simulation
     cell_size = mp.Vector3(sxy, sz)
 
     # Ports (position, sizes, directions)
     fiber_port_y = -sz / 2 + (
-            + pml_thickness 
-            + substrate_thickness 
-            + bottom_clad_thickness 
-            + core_thickness 
-            + top_clad_thickness 
-            + air_gap_thickness
-            + fiber_port_y_offset_from_air
-        )
-    fiber_port_center = mp.Vector3(
-        fiber_port_x_offset_from_angle,
-        fiber_port_y
-    )    
+        +pml_thickness
+        + substrate_thickness
+        + bottom_clad_thickness
+        + core_thickness
+        + top_clad_thickness
+        + air_gap_thickness
+        + fiber_port_y_offset_from_air
+    )
+    fiber_port_center = mp.Vector3(fiber_port_x_offset_from_angle, fiber_port_y)
     fiber_port_size = mp.Vector3(3.5 * fiber_core_diameter, 0, 0)
     fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
 
     waveguide_port_y = -sz / 2 + (
-            + pml_thickness 
-            + substrate_thickness 
-            + bottom_clad_thickness / 2
-            + core_thickness / 2
-            + top_clad_thickness / 2
-        )
+        +pml_thickness
+        + substrate_thickness
+        + bottom_clad_thickness / 2
+        + core_thickness / 2
+        + top_clad_thickness / 2
+    )
     waveguide_port_x = grating_start - waveguide_port_x_offset_from_grating_start
-    waveguide_port_center = mp.Vector3(waveguide_port_x, waveguide_port_y)  # grating_start - dtaper, 0)
-    waveguide_port_size = mp.Vector3(0, bottom_clad_thickness
-            + core_thickness / 2
-            + top_clad_thickness)
+    waveguide_port_center = mp.Vector3(
+        waveguide_port_x, waveguide_port_y
+    )  # grating_start - dtaper, 0)
+    waveguide_port_size = mp.Vector3(
+        0, bottom_clad_thickness + core_thickness / 2 + top_clad_thickness
+    )
     waveguide_port_direction = mp.X
 
     # Geometry
@@ -240,9 +252,7 @@ def get_simulation_fiber(
     geometry.append(
         mp.Block(
             material=fiber_core_material,
-            center=mp.Vector3(
-                x = 0
-            ),
+            center=mp.Vector3(x=0),
             size=mp.Vector3(fiber_core_diameter, hfiber_geom),
             e1=mp.Vector3(x=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
             e2=mp.Vector3(y=1).rotate(mp.Vector3(z=1), -1 * fiber_angle),
@@ -253,14 +263,18 @@ def get_simulation_fiber(
     geometry.append(
         mp.Block(
             material=mp.air,
-            center=mp.Vector3(0, -sz / 2 + (
-            + pml_thickness 
-            + substrate_thickness 
-            + bottom_clad_thickness 
-            + core_thickness
-            + top_clad_thickness
-            + air_gap_thickness / 2
-            )),
+            center=mp.Vector3(
+                0,
+                -sz / 2
+                + (
+                    +pml_thickness
+                    + substrate_thickness
+                    + bottom_clad_thickness
+                    + core_thickness
+                    + top_clad_thickness
+                    + air_gap_thickness / 2
+                ),
+            ),
             size=mp.Vector3(mp.inf, air_gap_thickness),
         )
     )
@@ -268,13 +282,17 @@ def get_simulation_fiber(
     geometry.append(
         mp.Block(
             material=top_clad_material,
-            center=mp.Vector3(0, -sz / 2 + (
-            + pml_thickness 
-            + substrate_thickness 
-            + bottom_clad_thickness 
-            + core_thickness/2
-            + top_clad_thickness/2
-            )),
+            center=mp.Vector3(
+                0,
+                -sz / 2
+                + (
+                    +pml_thickness
+                    + substrate_thickness
+                    + bottom_clad_thickness
+                    + core_thickness / 2
+                    + top_clad_thickness / 2
+                ),
+            ),
             size=mp.Vector3(mp.inf, core_thickness + top_clad_thickness),
         )
     )
@@ -282,11 +300,11 @@ def get_simulation_fiber(
     geometry.append(
         mp.Block(
             material=bottom_clad_material,
-            center=mp.Vector3(0, -sz / 2 + (
-            + pml_thickness 
-            + substrate_thickness 
-            + bottom_clad_thickness/2
-            )),
+            center=mp.Vector3(
+                0,
+                -sz / 2
+                + (+pml_thickness + substrate_thickness + bottom_clad_thickness / 2),
+            ),
             size=mp.Vector3(mp.inf, bottom_clad_thickness),
         )
     )
@@ -295,12 +313,16 @@ def get_simulation_fiber(
     geometry.append(
         mp.Block(
             material=core_material,
-            center=mp.Vector3(0, -sz / 2 + (
-            + pml_thickness 
-            + substrate_thickness 
-            + bottom_clad_thickness
-            + core_thickness/2
-            )),
+            center=mp.Vector3(
+                0,
+                -sz / 2
+                + (
+                    +pml_thickness
+                    + substrate_thickness
+                    + bottom_clad_thickness
+                    + core_thickness / 2
+                ),
+            ),
             size=mp.Vector3(mp.inf, core_thickness),
         )
     )
@@ -311,13 +333,17 @@ def get_simulation_fiber(
         geometry.append(
             mp.Block(
                 material=top_clad_material,
-                center=mp.Vector3(x + gap / 2, -sz / 2 + (
-                + pml_thickness 
-                + substrate_thickness 
-                + bottom_clad_thickness
-                + core_thickness
-                - etch_depth / 2
-            )),
+                center=mp.Vector3(
+                    x + gap / 2,
+                    -sz / 2
+                    + (
+                        +pml_thickness
+                        + substrate_thickness
+                        + bottom_clad_thickness
+                        + core_thickness
+                        - etch_depth / 2
+                    ),
+                ),
                 size=mp.Vector3(gap, etch_depth),
             )
         )
@@ -327,10 +353,7 @@ def get_simulation_fiber(
     geometry.append(
         mp.Block(
             material=mp.Medium(index=nsubstrate),
-            center=mp.Vector3(
-                0,
-                - sz/2 + pml_thickness / 2 + substrate_thickness / 2
-            ),
+            center=mp.Vector3(0, -sz / 2 + pml_thickness / 2 + substrate_thickness / 2),
             size=mp.Vector3(mp.inf, pml_thickness + substrate_thickness),
         )
     )
@@ -340,7 +363,7 @@ def get_simulation_fiber(
 
     # mode frequency
     fcen = 1 / wavelength
-    fwidth = 0.2*fcen # (wavelength_max - wavelength_min)
+    fwidth = 0.2 * fcen  # (wavelength_max - wavelength_min)
 
     # Waveguide source
     sources_directions = [mp.X]
@@ -485,7 +508,6 @@ if __name__ == "__main__":
     import matplotlib.pyplot as plt
     import inspect
 
-
     # results = {}
     # for angle in [10]:  # np.linspace(0,360,72):
     #     print(angle)
@@ -555,41 +577,41 @@ if __name__ == "__main__":
     # plt.show()
 
     # Plotting
-    epsilons = [1,1.43482,1.44,1.44427,3.47]
+    epsilons = [1, 1.43482, 1.44, 1.44427, 3.47]
 
     eps_parameters = {}
     eps_parameters["contour"] = True
     eps_parameters["levels"] = np.unique(epsilons)
 
-    fiber_numerical_aperture = float(np.sqrt(1.44427**2 - 1.43482**2))
+    fiber_numerical_aperture = float(np.sqrt(1.44427 ** 2 - 1.43482 ** 2))
 
     sim_dict = get_simulation_fiber(
-    # grating parameters
-    period = 0.66,
-    fill_factor = 0.5,
-    n_periods = 30,
-    etch_depth = 70 * nm,
-    # fiber parameters,
-    fiber_angle_deg = 20.0,
-    fiber_xposition = 0.0,
-    fiber_core_diameter = 9,
-    fiber_numerical_aperture = fiber_numerical_aperture,
-    fiber_nclad = nSiO2,
-    # material parameters
-    ncore = 3.47,
-    ncladtop = 1.44,
-    ncladbottom = 1.44,
-    nsubstrate = 3.47,
-    # stack parameters
-    pml_thickness = 1.0,
-    substrate_thickness = 1.0,
-    bottom_clad_thickness = 2.0,
-    core_thickness = 220 * nm,
-    top_clad_thickness = 2.0,
-    air_gap_thickness = 1.0,
-    fiber_thickness = 2.0,
-    # simulation parameters
-    res = 50,
+        # grating parameters
+        period=0.66,
+        fill_factor=0.5,
+        n_periods=30,
+        etch_depth=70 * nm,
+        # fiber parameters,
+        fiber_angle_deg=20.0,
+        fiber_xposition=0.0,
+        fiber_core_diameter=9,
+        fiber_numerical_aperture=fiber_numerical_aperture,
+        fiber_nclad=nSiO2,
+        # material parameters
+        ncore=3.47,
+        ncladtop=1.44,
+        ncladbottom=1.44,
+        nsubstrate=3.47,
+        # stack parameters
+        pml_thickness=1.0,
+        substrate_thickness=1.0,
+        bottom_clad_thickness=2.0,
+        core_thickness=220 * nm,
+        top_clad_thickness=2.0,
+        air_gap_thickness=1.0,
+        fiber_thickness=2.0,
+        # simulation parameters
+        res=50,
     )
-    plot(sim_dict['sim'], eps_parameters=eps_parameters)
+    plot(sim_dict["sim"], eps_parameters=eps_parameters)
     plt.show()
