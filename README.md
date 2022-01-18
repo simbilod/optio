@@ -1,31 +1,26 @@
 # optio
 
-Sample scripts to perform 2D grating coupler simulation using the open-source FDTD software MEEP
 
-Folder "far field" contains scripts to simulate the radiation pattern of a waveguide + grating.
-Folder "fiber" contains scripts to simulate the S-parameters of the fundamental TE mode of the waveguide and a (parametrized) fiber.
+Open-source simulation and optimization of OPTical IO to integrated photonic chips through MEEP and MPB [1,2]. Currently supports 2D simulations of grating couplers as referenced in [3,4].
 
-USAGE
+## TODO
 
-Example use:
-```
-# Define and run simulation
-df = fiber(run=True, overwrite=True)
-# Analyze results
-<...>
-```
-`df` is a Pandas dataframe containing the S-parameters vs wavelength. If `overwrite` is true, a `csv` file is (over)written with the results. Further executions of the function will load the results, allowing easy plotting in other scripts or notebooks.
-
-TODO
-
+* Usage documentation
 * Unittests w/ quantitative comparison to benchmark
+* Material dispersion
 * Improve parameter sweep interface
 * Add optimization (NLopt)
+* Clean up
 
-Clean up
+## References
 
-References
+- [1] https://github.com/NanoComp/meep
+- [2] http://www.simpetus.com/projects.html#meep_outcoupler
+- [3] Wang, Y., Flueckiger, J., Lin, C., & Chrostowski, L. (2013). Universal grating coupler design. Photonics North 2013. SPIE. doi: 10.1117/12.2042185
+- [4] Chrostowski, L., & Hochberg, M. (2015). Optical I/O. Silicon Photonics Design: From Devices to Systems. Cambridge University Press. doi: 10.1017/CBO9781316084168.006
+- [5] https://support.lumerical.com/hc/en-us/articles/360042305334-Grating-coupler
 
-- [1] Chrostowski, L., & Hochberg, M. (2015). Optical I/O. Silicon Photonics Design: From Devices to Systems. Cambridge University Press. doi: 10.1017/CBO9781316084168.006
-- [2] https://support.lumerical.com/hc/en-us/articles/360042305334-Grating-coupler
-- [3] http://www.simpetus.com/projects.html#meep_outcoupler
+## Acknowledgements
+
+* Simon Bilodeau: maintainer
+* Joaquin Matres Abril: packagification, basic sweeping and plotting routines
