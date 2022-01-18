@@ -103,6 +103,7 @@ def get_simulation_fiber(
     eps_averaging: bool = False,
     fiber_port_y_offset_from_air: float = 1,
     waveguide_port_x_offset_from_grating_start: float = 10,
+    fiber_port_x_size: Optional[float] = None,
     # **settings,
 ) -> Dict[str, Any]:
     """Returns simulation results from grating coupler with fiber.
@@ -110,13 +111,7 @@ def get_simulation_fiber(
     ncore = sqrt(na**2 + ncore**2)
 
     Args:
-        period: grating coupler period
-        fill_factor:
-        widths: overrides n_periods period and fill_factor
-        gaps: overrides n_periods period and fill_factor
-        fiber_angle_deg: angle fiber in degrees
-        decay_by: 1e-9
-
+        TODO
     """
     wavelengths = np.linspace(wavelength_min, wavelength_max, wavelength_points)
     wavelength = np.mean(wavelengths)
@@ -215,7 +210,7 @@ def get_simulation_fiber(
         + fiber_port_y_offset_from_air
     )
     fiber_port_center = mp.Vector3(fiber_port_x_offset_from_angle, fiber_port_y)
-    fiber_port_size = mp.Vector3(3.5 * fiber_core_diameter, 0, 0)
+    fiber_port_size =  fiber_port_x_size or mp.Vector3(3.5 * fiber_core_diameter, 0, 0)
     fiber_port_direction = mp.Vector3(y=-1).rotate(mp.Vector3(z=1), -1 * fiber_angle)
 
     waveguide_port_y = -sz / 2 + (

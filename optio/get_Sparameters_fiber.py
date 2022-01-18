@@ -5,12 +5,6 @@ MFD:
 - 10.4 for Cband
 - 9.2 for Oband
 
-TODO:
-
-- verify with lumerical sims
-- get Sparameters
-- enable mpi run from python
-
 """
 
 import sys
@@ -74,6 +68,7 @@ def get_Sparameters_simulation(
     dirpath: Optional[str] = None,
     decay_by: float = 1e-3,
     verbosity=0,
+    ncores: int = 1
 ) -> pd.DataFrame:
     """Returns simulation results from grating coupler with fiber.
 
@@ -87,6 +82,7 @@ def get_Sparameters_simulation(
     settings.update(
         {
             "decay_by": decay_by,
+            "ncores": ncores,
         }
     )
 
@@ -247,7 +243,7 @@ def get_Sparameters_fiber(
     dirpath: Optional[str] = None,
     decay_by: float = 1e-3,
     ncores: int = 1,
-    verbosity=0,
+    verbosity: int = 0,
 ) -> pd.DataFrame:
 
     sim_dict = get_simulation_fiber(
@@ -290,6 +286,7 @@ def get_Sparameters_fiber(
         dirpath=dirpath,
         decay_by=decay_by,
         verbosity=verbosity,
+        ncores=ncores,
     )
     return df
 
@@ -318,6 +315,9 @@ def write_sparameters_meep_parallel(
     temp_dir = pathlib.Path(temp_dir)
     temp_dir.mkdir(exist_ok=True, parents=True)
     filepath = temp_dir / temp_file_str
+
+    # Add parallelism info
+    instance["ncores"] = cores
 
     # Write execution file
     script_lines = [
@@ -478,4 +478,5 @@ if __name__ == "__main__":
         cores_per_instance=4,
         total_cores=8,
         verbosity=True,
+        delete_temp_files=True,
     )
